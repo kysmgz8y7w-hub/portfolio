@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>舒适性指标</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg-primary:#07090D;--bg-card:#161B22;--bg-input:#1A1F2B;
+    --border:#30363D;--text-primary:#E6EDF3;--text-secondary:#8B949E;--text-muted:#6E7681;
+    --green:#00C853;--red:#FF5252;--yellow:#FFB300;--orange:#FF9800;
+    --radius:10px;--radius-sm:8px;
+    --font-sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --font-mono:'SF Mono','Cascadia Code','Consolas',monospace;
+  }
+  html,body{width:100%;min-height:100vh;background:#0A0D14;color:var(--text-primary);font-family:var(--font-sans);font-size:15px;-webkit-font-smoothing:antialiased;display:flex;align-items:center;justify-content:center}
+
+  .cmf-modal{width:420px;max-width:92vw;height:920px;max-height:92vh;background:#1A1B20;border-radius:18px;display:flex;flex-direction:column;border:1px solid rgba(255,255,255,.07);box-shadow:0 28px 100px rgba(0,0,0,.7);overflow:hidden}
+  .cmf-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;flex-shrink:0}
+  .cmf-header-title{font-size:15px;font-weight:600;color:var(--text-primary)}
+  .cmf-header-title .cmf-pct{font-size:26px;font-weight:800}
+  .cmf-header-close{width:32px;height:32px;border-radius:var(--radius-sm);background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text-secondary);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;line-height:1}
+  .cmf-header-close:hover{background:var(--red);color:#fff;border-color:var(--red)}
+  .cmf-body{flex-grow:1;height:0;overflow-y:auto;overflow-x:hidden;padding:0 16px 20px}
+  .cmf-body::-webkit-scrollbar{width:3px}
+  .cmf-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+  .cmf-coffee{text-align:center;padding:4px 0 12px}
+  .cmf-coffee svg{width:150px;height:140px}
+  .cmf-steam{animation:cmfSteam 2s ease-in-out infinite;opacity:.6}
+  .cmf-steam:nth-child(2){animation-delay:.4s}
+  .cmf-steam:nth-child(3){animation-delay:.8s}
+  @keyframes cmfSteam{0%,100%{transform:translateY(0);opacity:0}50%{transform:translateY(-8px);opacity:.6}}
+  .cmf-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px;overflow:hidden}
+  .cmf-card.cmf-card-stats{margin-top:16px;margin-bottom:16px;padding:4px 14px}
+  .cmf-card.cmf-card-stats .cmf-stat{padding:8px 4px}
+  .cmf-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .cmf-card-title{font-size:13px;font-weight:600;color:var(--text-primary)}
+  .cmf-card-value{font-size:13px;font-weight:700;color:var(--text-primary)}
+  .cmf-card-value .cmf-unit{font-size:10px;font-weight:500;color:var(--text-muted)}
+  .cmf-bar{height:8px;border-radius:4px;display:flex;overflow:hidden;gap:2px}
+  .cmf-bar-seg{height:100%;border-radius:4px}
+  .cmf-bar-seg.s-good{background:var(--green)}
+  .cmf-bar-seg.s-warn{background:var(--yellow)}
+  .cmf-bar-seg.s-mild{background:var(--orange)}
+  .cmf-bar-seg.s-bad{background:var(--red)}
+  .cmf-legend{display:flex;gap:12px;margin-top:8px;flex-wrap:wrap}
+  .cmf-legend-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-secondary)}
+  .cmf-legend-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .cmf-legend-dot.good{background:var(--green)}
+  .cmf-legend-dot.warn{background:var(--yellow)}
+  .cmf-legend-dot.mild{background:var(--orange)}
+  .cmf-legend-dot.bad{background:var(--red)}
+  .cmf-chart-wrap{position:relative;height:70px;overflow:hidden}
+  .cmf-chart-wrap canvas{position:absolute;top:0;left:0;width:100%;height:100%}
+  .cmf-stats{display:flex}
+  .cmf-stat{flex:1;min-width:0;text-align:center;padding:12px 4px;position:relative}
+  .cmf-stat:last-child::after{display:none}
+  .cmf-stat::after{content:'';position:absolute;right:0;top:30%;height:40%;width:1px;background:var(--border)}
+  .cmf-stat-label{font-size:10px;color:var(--text-muted);margin-bottom:3px}
+  .cmf-stat-val{font-size:20px;font-weight:800;color:var(--text-primary)}
+  .cmf-stat-val .cmf-stat-unit{font-size:11px;font-weight:500;color:var(--text-muted)}
+  .cmf-events-section{padding:14px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius)}
+  .cmf-events-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:0 2px}
+  .cmf-events-title{font-size:13px;font-weight:600;color:var(--text-primary)}
+  .cmf-events-count{font-size:11px;color:var(--text-muted)}
+  .cmf-event-row{display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid rgba(255,255,255,.04)}
+  .cmf-event-row:last-child{border-bottom:none}
+  .cmf-event-time{font-size:12px;color:var(--text-muted);font-family:var(--font-mono);flex-shrink:0;width:60px}
+  .cmf-event-bar{width:3px;height:32px;border-radius:2px;flex-shrink:0}
+  .cmf-event-bar.lv-bad{background:var(--red)}
+  .cmf-event-bar.lv-good{background:var(--green)}
+  .cmf-event-bar.lv-mild{background:var(--orange)}
+  .cmf-event-info{flex:1;min-width:0}
+  .cmf-event-level{font-size:13px;font-weight:700}
+  .cmf-event-level.lv-bad{color:var(--red)}
+  .cmf-event-level.lv-good{color:var(--green)}
+  .cmf-event-level.lv-mild{color:var(--orange)}
+  .cmf-event-desc{font-size:11px;color:var(--text-muted);margin-top:1px}
+  .cmf-event-score{width:34px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;background:var(--bg-input);border:1px solid var(--border);color:var(--text-secondary)}
+  .cmf-more{text-align:center;padding:8px 0 2px;font-size:11px;color:var(--text-muted);cursor:pointer}
+  .cmf-more:hover{color:var(--text-secondary)}
+</style>
+</head>
+<body>
+
+<div class="cmf-modal">
+  <div class="cmf-header">
+    <div><span class="cmf-header-title">咖啡还剩 <span class="cmf-pct" id="cmfPct">90</span>%</span></div>
+    <button class="cmf-header-close" onclick="window.close();if(!window.closed)location.href='index.html'">✕</button>
+  </div>
+  <div class="cmf-body">
+    <div class="cmf-coffee"><svg viewBox="0 0 220 190" fill="none">
+      <defs>
+        <clipPath id="cupClip"><path d="M60 40 L60 140 Q60 152 110 152 Q160 152 160 140 L160 40 Z"/></clipPath>
+        <linearGradient id="cupGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#5C5872"/><stop offset="50%" stop-color="#4A475E" stop-opacity=".6"/><stop offset="100%" stop-color="#3D3A50"/></linearGradient>
+        <linearGradient id="coffeeGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#8B5E3C"/><stop offset="40%" stop-color="#6D4527"/><stop offset="100%" stop-color="#5C3A20"/></linearGradient>
+      </defs>
+      <line class="cmf-steam" x1="100" y1="28" x2="98" y2="6" stroke="#3D3A50" stroke-width="3" stroke-linecap="round"/>
+      <line class="cmf-steam" x1="110" y1="26" x2="110" y2="4" stroke="#3D3A50" stroke-width="3" stroke-linecap="round"/>
+      <line class="cmf-steam" x1="120" y1="28" x2="122" y2="6" stroke="#3D3A50" stroke-width="3" stroke-linecap="round"/>
+      <ellipse cx="110" cy="158" rx="72" ry="14" fill="#2E2B3D"/>
+      <path d="M60 40 L60 140 Q60 152 110 152 Q160 152 160 140 L160 40 Z" fill="url(#cupGrad)" opacity=".85"/>
+      <rect id="cmfCoffeeLevel" x="58" y="42" width="104" height="112" fill="url(#coffeeGrad)" clip-path="url(#cupClip)"/>
+      <g clip-path="url(#cupClip)">
+        <path id="cmfWave" d="M50 90 Q70 85 90 90 T130 90 T170 90 L170 95 Q150 100 130 95 T90 95 T50 95 Z" fill="#A06B3A" opacity=".45">
+          <animate attributeName="d" dur="2.5s" repeatCount="indefinite" values="M50 90 Q70 85 90 90 T130 90 T170 90 L170 95 Q150 100 130 95 T90 95 T50 95 Z;M50 90 Q70 95 90 90 T130 90 T170 90 L170 95 Q150 90 130 95 T90 95 T50 95 Z;M50 90 Q70 85 90 90 T130 90 T170 90 L170 95 Q150 100 130 95 T90 95 T50 95 Z"/>
+        </path>
+      </g>
+      <ellipse cx="110" cy="40" rx="50" ry="7" fill="#5C5872" opacity=".5"/>
+      <ellipse cx="110" cy="40" rx="46" ry="5" fill="#2E2B3D" opacity=".6"/>
+      <path d="M160 65 C182 65 187 85 187 95 C187 108 180 118 160 118" stroke="#4A475E" stroke-width="7" fill="none" stroke-linecap="round"/>
+    </svg></div>
+
+    <div class="cmf-card">
+      <div class="cmf-card-header"><span class="cmf-card-title">行程舒适分布</span><span class="cmf-card-value">行程<span style="color:var(--text-primary)"> 12:00</span></span></div>
+      <div class="cmf-bar"><div class="cmf-bar-seg s-good" style="width:50%"></div><div class="cmf-bar-seg s-warn" style="width:25%"></div><div class="cmf-bar-seg s-mild" style="width:17%"></div><div class="cmf-bar-seg s-bad" style="width:8%"></div></div>
+      <div class="cmf-legend"><span class="cmf-legend-item"><span class="cmf-legend-dot good"></span>优 91%</span><span class="cmf-legend-item"><span class="cmf-legend-dot warn"></span>临界 91%</span><span class="cmf-legend-item"><span class="cmf-legend-dot mild"></span>轻度 91%</span><span class="cmf-legend-item"><span class="cmf-legend-dot bad"></span>不适 91%</span></div>
+    </div>
+
+    <div class="cmf-card">
+      <div class="cmf-card-header"><span class="cmf-card-title">纵向舒适度</span><span class="cmf-card-value">0.95<span class="cmf-unit">G</span></span></div>
+      <div class="cmf-chart-wrap"><canvas id="cmfChartLon"></canvas></div>
+      <div class="cmf-card-header" style="margin-top:12px"><span class="cmf-card-title">横向舒适度</span><span class="cmf-card-value">0.00<span class="cmf-unit">G</span></span></div>
+      <div class="cmf-chart-wrap"><canvas id="cmfChartLat"></canvas></div>
+    </div>
+
+    <div class="cmf-card cmf-card-stats">
+      <div class="cmf-stats">
+        <div class="cmf-stat"><div class="cmf-stat-label">实时速度</div><div class="cmf-stat-val" id="cmfSpeed">100<span class="cmf-stat-unit">km/h</span></div></div>
+        <div class="cmf-stat"><div class="cmf-stat-label">行驶里程</div><div class="cmf-stat-val">100<span class="cmf-stat-unit">km</span></div></div>
+        <div class="cmf-stat"><div class="cmf-stat-label">不良体验</div><div class="cmf-stat-val" style="color:var(--orange)">6</div></div>
+      </div>
+    </div>
+
+    <div class="cmf-events-section">
+      <div class="cmf-events-header"><span class="cmf-events-title">不良体验事件</span><span class="cmf-events-count">6 条记录</span></div>
+      <div class="cmf-event-row"><span class="cmf-event-time">14:01:02</span><div class="cmf-event-bar lv-bad"></div><div class="cmf-event-info"><div class="cmf-event-level lv-bad">中度不适</div><div class="cmf-event-desc">纵向RMS 0.83m/s</div></div><div class="cmf-event-score">0.5</div></div>
+      <div class="cmf-event-row"><span class="cmf-event-time">14:01:02</span><div class="cmf-event-bar lv-good"></div><div class="cmf-event-info"><div class="cmf-event-level lv-good">舒适</div><div class="cmf-event-desc">纵向RMS 0.83m/s</div></div><div class="cmf-event-score">0.5</div></div>
+      <div class="cmf-event-row"><span class="cmf-event-time">14:01:02</span><div class="cmf-event-bar lv-mild"></div><div class="cmf-event-info"><div class="cmf-event-level lv-mild">轻微不适</div><div class="cmf-event-desc">纵向RMS 0.83m/s</div></div><div class="cmf-event-score">0.7</div></div>
+      <div class="cmf-event-row"><span class="cmf-event-time">14:02:15</span><div class="cmf-event-bar lv-bad"></div><div class="cmf-event-info"><div class="cmf-event-level lv-bad">中度不适</div><div class="cmf-event-desc">横向RMS 1.02m/s</div></div><div class="cmf-event-score">0.4</div></div>
+      <div class="cmf-event-row"><span class="cmf-event-time">14:03:30</span><div class="cmf-event-bar lv-good"></div><div class="cmf-event-info"><div class="cmf-event-level lv-good">舒适</div><div class="cmf-event-desc">纵向RMS 0.21m/s</div></div><div class="cmf-event-score">0.9</div></div>
+      <div class="cmf-event-row"><span class="cmf-event-time">14:04:48</span><div class="cmf-event-bar lv-mild"></div><div class="cmf-event-info"><div class="cmf-event-level lv-mild">轻微不适</div><div class="cmf-event-desc">横向RMS 0.55m/s</div></div><div class="cmf-event-score">0.6</div></div>
+      <div class="cmf-more">▾ 查看更多</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function setCoffeeLevel(pct){
+  var el=document.getElementById('cmfCoffeeLevel');
+  var wave=document.getElementById('cmfWave');
+  var title=document.getElementById('cmfPct');
+  if(!el)return;
+  var cupTop=42,cupH=110;
+  var ratio=Math.max(0,Math.min(100,pct))/100;
+  var fillH=Math.round(cupH*ratio);
+  var fillY=cupTop+cupH-fillH;
+  el.setAttribute('y',fillY);
+  el.setAttribute('height',fillH);
+  if(wave){
+    var wy=fillY,wy2=wy+5;
+    var v1='M50 '+wy+' Q70 '+(wy-5)+' 90 '+wy+' T130 '+wy+' T170 '+wy+' L170 '+wy2+' Q150 '+(wy2+5)+' 130 '+wy2+' T90 '+wy2+' T50 '+wy2+' Z';
+    var v2='M50 '+wy+' Q70 '+(wy+5)+' 90 '+wy+' T130 '+wy+' T170 '+wy+' L170 '+wy2+' Q150 '+(wy2-5)+' 130 '+wy2+' T90 '+wy2+' T50 '+wy2+' Z';
+    wave.setAttribute('d',v1);
+    var anim=wave.querySelector('animate');
+    if(anim)anim.setAttribute('values',v1+';'+v2+';'+v1);
+  }
+  if(title)title.textContent=pct;
+}
+
+function generateCmfData(b,p){var a=[];for(var i=0;i<60;i++){var v=b+(Math.random()-0.5)*0.15;if(i>40&&i<50)v=p+(Math.random()-0.5)*0.1;a.push(Math.max(0,Math.min(1.2,v)));}return a;}
+
+function drawCmfChart(id,data,color,th){
+  var c=document.getElementById(id);if(!c)return;
+  var wr=c.parentElement,w=wr.clientWidth,h=wr.clientHeight||80,d=window.devicePixelRatio||1;
+  c.width=w*d;c.height=h*d;
+  var x=c.getContext('2d');x.scale(d,d);
+  var mx=1.2,pL=28,pR=4,pT=4,pB=14,cw=w-pL-pR,ch=h-pT-pB;
+  x.clearRect(0,0,w,h);x.font='10px monospace';x.fillStyle='#6E7681';x.textAlign='right';
+  [1.0,0.5,0.0].forEach(function(v){var y=pT+ch-(v/mx)*ch;x.fillText(v.toFixed(1),pL-4,y+3);x.setLineDash([4,4]);x.strokeStyle='rgba(255,255,255,.08)';x.lineWidth=1;x.beginPath();x.moveTo(pL,y);x.lineTo(w-pR,y);x.stroke();});
+  th.forEach(function(v){var y=pT+ch-(v/mx)*ch;x.setLineDash([6,4]);x.strokeStyle=v>=1.0?'rgba(255,82,82,.5)':'rgba(255,179,0,.5)';x.lineWidth=1;x.beginPath();x.moveTo(pL,y);x.lineTo(w-pR,y);x.stroke();});
+  x.setLineDash([]);x.strokeStyle=color;x.lineWidth=2;x.lineJoin='round';x.beginPath();
+  data.forEach(function(v,i){var px=pL+(i/(data.length-1))*cw,py=pT+ch-(v/mx)*ch;if(i===0)x.moveTo(px,py);else x.lineTo(px,py);});
+  x.stroke();var g=x.createLinearGradient(0,pT,0,h);g.addColorStop(0,color+'30');g.addColorStop(1,color+'00');x.lineTo(pL+cw,pT+ch);x.lineTo(pL,pT+ch);x.closePath();x.fillStyle=g;x.fill();
+}
+
+setCoffeeLevel(90);
+requestAnimationFrame(function(){
+  drawCmfChart('cmfChartLon',generateCmfData(0.7,0.95),'#FF9800',[0.5,1.0]);
+  drawCmfChart('cmfChartLat',generateCmfData(0.2,0.45),'#00C853',[0.5,1.0]);
+});
+
+var coffeePercent=90;
+setInterval(function(){
+  if(coffeePercent>5){
+    coffeePercent-=Math.round(Math.random()*3+1);
+    coffeePercent=Math.max(0,coffeePercent);
+    setCoffeeLevel(coffeePercent);
+  }
+},8000);
+
+var currentSpeed=100;
+setInterval(function(){
+  currentSpeed+=Math.round((Math.random()-0.5)*6);
+  currentSpeed=Math.max(0,Math.min(160,currentSpeed));
+  document.getElementById('cmfSpeed').innerHTML=currentSpeed+'<span class="cmf-stat-unit">km/h</span>';
+},2000);
+</script>
+</body>
+</html>

@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>设计作品集</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0A0A0C;
+      --card: #141416;
+      --surface: #1a1a1d;
+      --border: rgba(255,255,255,0.06);
+      --accent: #4a90ff;
+      --accent-glow: rgba(74,144,255,0.15);
+      --green: #34c759;
+      --purple: #a855f7;
+      --orange: #ff9f0a;
+      --text: #eaeaf2;
+      --text-sec: #9898b0;
+      --text-dim: #555570;
+      --font: -apple-system, 'PingFang SC', 'SF Pro Display', 'Helvetica Neue', sans-serif;
+      --mono: 'SF Mono', 'Menlo', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== Nav ===== */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center;
+      padding: 0 48px; height: 64px;
+      background: rgba(10,10,12,0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-size: 18px; font-weight: 700;
+      color: var(--text);
+      letter-spacing: 1px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .nav-logo .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent-glow);
+    }
+
+    .nav-links {
+      display: flex; gap: 8px; margin-left: auto;
+    }
+    .nav-links a {
+      color: var(--text-sec); text-decoration: none;
+      font-size: 14px; font-weight: 500;
+      padding: 8px 18px; border-radius: 8px;
+      transition: all 0.15s;
+    }
+    .nav-links a:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+    .nav-links a.active { color: var(--accent); background: var(--accent-glow); }
+
+    /* ===== Hero ===== */
+    .hero {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 120px 48px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute; top: -200px; right: -200px;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(74,144,255,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero::after {
+      content: '';
+      position: absolute; bottom: -100px; left: -100px;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(168,85,247,0.04) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-content {
+      text-align: center; max-width: 700px;
+      position: relative; z-index: 1;
+    }
+
+    .avatar {
+      width: 120px; height: 120px;
+      border-radius: 50%; margin: 0 auto 28px;
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 42px; font-weight: 700; color: #fff;
+      box-shadow: 0 0 40px var(--accent-glow);
+      position: relative;
+    }
+    .avatar::after {
+      content: ''; position: absolute; inset: -4px;
+      border-radius: 50%;
+      border: 2px solid rgba(74,144,255,0.2);
+    }
+
+    .hero h1 {
+      font-size: 48px; font-weight: 800;
+      line-height: 1.2; margin-bottom: 12px;
+      background: linear-gradient(135deg, var(--text) 0%, var(--text-sec) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero .subtitle {
+      font-size: 20px; color: var(--accent);
+      font-weight: 500; margin-bottom: 20px;
+      letter-spacing: 2px;
+    }
+
+    .hero .desc {
+      font-size: 16px; color: var(--text-sec);
+      max-width: none; margin: 0 auto 32px;
+      line-height: 1.8; white-space: nowrap;
+    }
+
+    .hero-btns {
+      display: flex; gap: 14px; justify-content: center;
+    }
+    .btn-hero {
+      padding: 12px 32px; border-radius: 10px;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+      text-decoration: none;
+    }
+    .btn-hero:active { transform: scale(0.97); }
+    .btn-hero.primary {
+      background: var(--accent); color: #fff; border: none;
+      box-shadow: 0 4px 16px var(--accent-glow);
+    }
+    .btn-hero.primary:hover { box-shadow: 0 8px 30px rgba(74,144,255,0.25); }
+    .btn-hero.ghost {
+      background: transparent; color: var(--text-sec);
+      border: 1px solid var(--border);
+    }
+    .btn-hero.ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+
+    /* ===== Section ===== */
+    .section {
+      padding: 100px 48px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section-header {
+      text-align: center; margin-bottom: 60px;
+    }
+    .section-header h2 {
+      font-size: 36px; font-weight: 700; margin-bottom: 12px;
+    }
+    .section-header p {
+      font-size: 16px; color: var(--text-sec);
+    }
+    .section-header .line {
+      width: 40px; height: 3px; border-radius: 2px;
+      background: var(--accent); margin: 16px auto 0;
+    }
+
+    /* ===== Works Grid ===== */
+    .works-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 24px;
+    }
+
+    .work-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+      cursor: pointer;
+    }
+    .work-card:hover {
+      transform: translateY(-6px);
+      border-color: rgba(74,144,255,0.15);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.3), 0 0 30px var(--accent-glow);
+    }
+
+    .work-cover {
+      width: 100%; height: 220px;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+
+    .work-cover canvas { width: 100%; height: 100%; }
+
+    .work-body { padding: 22px 24px 24px; }
+
+    .work-title {
+      font-size: 18px; font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .work-desc {
+      font-size: 13px; color: var(--text-sec);
+      line-height: 1.7; margin-bottom: 14px;
+    }
+
+    .work-tags {
+      display: flex; gap: 6px; flex-wrap: wrap;
+    }
+    .work-tag {
+      padding: 4px 12px; border-radius: 20px;
+      font-size: 11px; font-weight: 500;
+    }
+    .work-tag.blue { background: rgba(74,144,255,0.08); color: var(--accent); }
+    .work-tag.green { background: rgba(52,199,89,0.08); color: var(--green); }
+    .work-tag.purple { background: rgba(168,85,247,0.08); color: var(--purple); }
+    .work-tag.orange { background: rgba(255,159,10,0.08); color: var(--orange); }
+
+    /* ===== About ===== */
+    .about-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px; align-items: start;
+    }
+
+    .about-text {
+      font-size: 15px; color: var(--text-sec);
+      line-height: 1.9;
+    }
+    .about-text p { margin-bottom: 16px; }
+
+    .skill-section { margin-top: 8px; }
+    .skill-title {
+      font-size: 13px; color: var(--text-dim);
+      text-transform: uppercase; letter-spacing: 1px;
+      font-weight: 600; margin-bottom: 12px;
+    }
+    .skill-tags {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      margin-bottom: 24px;
+    }
+    .skill-tag {
+      padding: 8px 18px; border-radius: 8px;
+      background: var(--card); border: 1px solid var(--border);
+      font-size: 13px; color: var(--text-sec);
+      transition: all 0.15s;
+    }
+    .skill-tag:hover { border-color: rgba(74,144,255,0.2); color: var(--accent); }
+
+    .stat-row {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 16px; margin-top: 32px;
+    }
+    .stat-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 20px; text-align: center;
+    }
+    .stat-num {
+      font-size: 32px; font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .stat-label { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+
+    /* ===== Footer ===== */
+    footer {
+      padding: 40px 48px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .footer-links {
+      display: flex; gap: 24px; justify-content: center;
+      margin-bottom: 20px;
+    }
+    .footer-links a {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: var(--card); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-sec); text-decoration: none;
+      transition: all 0.15s;
+    }
+    .footer-links a:hover {
+      border-color: rgba(74,144,255,0.2); color: var(--accent);
+      transform: translateY(-2px);
+    }
+    .footer-links a svg { width: 18px; height: 18px; fill: currentColor; }
+
+    .footer-copy {
+      font-size: 13px; color: var(--text-dim);
+    }
+
+    .footer-links a { position: relative; }
+    .qr-popup {
+      position: absolute; bottom: 56px; left: 50%;
+      transform: translateX(-50%) scale(0.9);
+      width: 180px; padding: 14px;
+      background: #fff; border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+      opacity: 0; pointer-events: none;
+      transition: all 0.2s ease;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .qr-popup::after {
+      content: ''; position: absolute; bottom: -6px; left: 50%;
+      transform: translateX(-50%) rotate(45deg);
+      width: 12px; height: 12px; background: #fff;
+    }
+    .qr-popup img { width: 150px; height: 150px; object-fit: contain; border-radius: 6px; display: block; }
+    .qr-popup .qr-label { text-align: center; font-size: 11px; color: #666; margin-top: 8px; }
+    .footer-links a:hover .qr-popup {
+      opacity: 1; pointer-events: auto; transform: translateX(-50%) scale(1);
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .hero { padding: 100px 20px 60px; }
+      .hero h1 { font-size: 32px; }
+      .section { padding: 60px 20px; }
+      .works-grid { grid-template-columns: 1fr; }
+      .about-content { grid-template-columns: 1fr; }
+      .stat-row { grid-template-columns: 1fr; }
+    }
+
+    /* ===== Animations ===== */
+    .fade-up {
+      opacity: 0; transform: translateY(20px);
+      transition: all 0.6s cubic-bezier(0.22,1,0.36,1);
+    }
+    .fade-up.visible { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav>
+    <div class="nav-logo"><span class="dot"></span>Portfolio</div>
+    <div class="nav-links">
+      <a href="#hero" class="active">首页</a>
+      <a href="#works">作品</a>
+      <a href="#about">关于</a>
+      <a href="#contact">联系</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero" id="hero">
+    <div class="hero-content">
+      <div class="avatar">P</div>
+      <div class="subtitle">UI / HMI 设计师</div>
+      <h1>用设计驱动智能出行体验</h1>
+      <p class="desc">HMI 设计师，聚焦车载交互体验。我相信好的座舱设计是让驾驶者无需思考就能操作。</p>
+      <div class="hero-btns">
+        <a href="#works" class="btn-hero primary">查看作品</a>
+        <a href="#about" class="btn-hero ghost">了解更多</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Works -->
+  <section class="section" id="works">
+    <div class="section-header fade-up">
+      <h2>精选作品</h2>
+      <p>近期参与的核心项目，涵盖智驾 HMI、车端工具、数据采集等领域</p>
+      <div class="line"></div>
+    </div>
+
+    <div class="works-grid">
+      <div class="work-card fade-up" onclick="window.open('%E5%B7%A5%E7%A8%8B%E6%A8%A1%E5%BC%8F.html','_blank')">
+        <div class="work-cover"><canvas id="c4"></canvas></div>
+        <div class="work-body">
+          <div class="work-title">工程模式</div>
+          <div class="work-desc">车载辅助驾驶传感器校准工具，支持摄像头、激光雷达、IMU、毫米波雷达分类选择与校准流程管理。</div>
+          <div class="work-tags">
+            <span class="work-tag purple">校准</span>
+            <span class="work-tag blue">传感器</span>
+            <span class="work-tag orange">HMI</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="work-card fade-up" onclick="window.open('comfort.html','_blank')">
+        <div class="work-cover" id="coffee-cover" style="background:linear-gradient(135deg,hsl(30,30%,12%),hsl(60,25%,8%));display:flex;align-items:center;justify-content:center;position:relative;">
+          <svg viewBox="0 0 150 160" width="140" height="150" style="filter:drop-shadow(0 4px 20px rgba(160,113,79,0.25))">
+            <defs>
+              <clipPath id="cupClipCard"><path d="M30,30 L35,115 C35,125 50,130 75,130 C100,130 115,125 115,115 L120,30 Z"/></clipPath>
+              <linearGradient id="coffeeGradCard" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0%" stop-color="#6B3E26"/><stop offset="60%" stop-color="#8B5E3C"/><stop offset="100%" stop-color="#A0714F"/>
+              </linearGradient>
+              <linearGradient id="cupGradCard" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#4a4a5e"/><stop offset="100%" stop-color="#2a2a3e"/>
+              </linearGradient>
+            </defs>
+            <g opacity="0.5">
+              <line x1="62" y1="6" x2="62" y2="22" stroke="rgba(180,160,140,0.5)" stroke-width="2" stroke-linecap="round"><animate attributeName="y1" values="6;2;6" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.3;0.7;0.3" dur="2s" repeatCount="indefinite"/></line>
+              <line x1="75" y1="4" x2="75" y2="24" stroke="rgba(180,160,140,0.5)" stroke-width="2" stroke-linecap="round"><animate attributeName="y1" values="4;0;4" dur="2s" begin="0.4s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.3;0.7;0.3" dur="2s" begin="0.4s" repeatCount="indefinite"/></line>
+              <line x1="88" y1="6" x2="88" y2="22" stroke="rgba(180,160,140,0.5)" stroke-width="2" stroke-linecap="round"><animate attributeName="y1" values="6;2;6" dur="2s" begin="0.8s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.3;0.7;0.3" dur="2s" begin="0.8s" repeatCount="indefinite"/></line>
+            </g>
+            <ellipse cx="75" cy="132" rx="55" ry="8" fill="#2a2a3e" stroke="#3a3a50" stroke-width="1"/>
+            <path d="M30,30 L35,115 C35,125 50,130 75,130 C100,130 115,125 115,115 L120,30 Z" fill="url(#cupGradCard)" stroke="#4a4a5e" stroke-width="1.5"/>
+            <g clip-path="url(#cupClipCard)">
+              <rect x="30" y="39" width="90" height="91" fill="url(#coffeeGradCard)" opacity="0.85"><animate attributeName="y" values="39;37;39" dur="3s" repeatCount="indefinite"/></rect>
+              <path d="M30,40 Q52,35 75,40 Q98,45 120,40" fill="none" stroke="rgba(200,160,120,0.3)" stroke-width="1.5"><animate attributeName="d" values="M30,40 Q52,35 75,40 Q98,45 120,40;M30,40 Q52,45 75,40 Q98,35 120,40;M30,40 Q52,35 75,40 Q98,45 120,40" dur="3s" repeatCount="indefinite"/></path>
+            </g>
+            <ellipse cx="75" cy="30" rx="45" ry="5" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+            <path d="M120,50 C145,50 145,90 120,90" fill="none" stroke="#4a4a5e" stroke-width="4" stroke-linecap="round"/>
+            <text x="75" y="85" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="22" font-weight="700" font-family="-apple-system,sans-serif">90%</text>
+          </svg>
+        </div>
+        <div class="work-body">
+          <div class="work-title">舒适性指标监测</div>
+          <div class="work-desc">咖啡杯可视化舒适度评分、纵横向 G 值监测、不良体验事件实时记录与分析。</div>
+          <div class="work-tags">
+            <span class="work-tag green">数据</span>
+            <span class="work-tag orange">体验</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="work-card fade-up" onclick="window.open('%E6%89%93%E7%82%B9%E5%B7%A5%E5%85%B7.html','_blank')">
+        <div class="work-cover"><canvas id="c7"></canvas></div>
+        <div class="work-body">
+          <div class="work-title">数据采集界面</div>
+          <div class="work-desc">车端数据采集工具，支持采集信息监控、QT 数据管理、采集场景配置、磁盘管理与采集记录查看。</div>
+          <div class="work-tags">
+            <span class="work-tag blue">采集</span>
+            <span class="work-tag green">工具</span>
+            <span class="work-tag orange">车端</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="work-card fade-up" onclick="window.open('gesture-parking.html','_blank')">
+        <div class="work-cover"><canvas id="c8"></canvas></div>
+        <div class="work-body">
+          <div class="work-title">手势泊车</div>
+          <div class="work-desc">隔空手势召唤泊车功能，支持激活手势识别、多方向泊出指令、功能中断与恢复操作。</div>
+          <div class="work-tags">
+            <span class="work-tag blue">AVP</span>
+            <span class="work-tag purple">手势</span>
+            <span class="work-tag orange">泊车</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- About -->
+  <section class="section" id="about">
+    <div class="section-header fade-up">
+      <h2>关于我</h2>
+      <p>热爱设计，善用工具，追求极致的用户体验</p>
+      <div class="line"></div>
+    </div>
+
+    <div class="about-content fade-up">
+      <div>
+        <div class="about-text">
+          <p>专注于智能出行体验的 HMI 设计师，负责车载系统的界面设计与用户体验优化。在日常工作中积极探索 AI 工具与设计工作流的融合，用 Claude Code 等工具实现从设计到可交互原型的全链路输出。</p>
+          <p>擅长将复杂的技术功能转化为直观、高效的用户界面，在保证安全性的前提下提升驾驶辅助系统的易用性和美观度。</p>
+        </div>
+
+        <div class="skill-section">
+          <div class="skill-title">设计技能</div>
+          <div class="skill-tags">
+            <span class="skill-tag">Figma</span>
+            <span class="skill-tag">Sketch</span>
+            <span class="skill-tag">HMI Design</span>
+            <span class="skill-tag">交互设计</span>
+            <span class="skill-tag">用户研究</span>
+            <span class="skill-tag">设计系统</span>
+          </div>
+
+          <div class="skill-title">技术能力</div>
+          <div class="skill-tags">
+            <span class="skill-tag">HTML / CSS</span>
+            <span class="skill-tag">JavaScript</span>
+            <span class="skill-tag">Canvas</span>
+            <span class="skill-tag">Claude Code</span>
+            <span class="skill-tag">Cursor</span>
+          </div>
+
+          <div class="skill-title">领域知识</div>
+          <div class="skill-tags">
+            <span class="skill-tag">智能驾驶</span>
+            <span class="skill-tag">ADAS</span>
+            <span class="skill-tag">AVP 泊车</span>
+            <span class="skill-tag">车载系统</span>
+            <span class="skill-tag">传感器</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="stat-row">
+          <div class="stat-card">
+            <div class="stat-num">10+</div>
+            <div class="stat-label">年设计经验</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">20+</div>
+            <div class="stat-label">项目交付</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">3</div>
+            <div class="stat-label">车型落地</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer id="contact">
+    <div class="footer-links">
+      <a href="#" title="Email">
+        <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+      </a>
+      <a href="#" title="GitHub">
+        <svg viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+      </a>
+      <a href="#" title="WeChat">
+        <svg viewBox="0 0 24 24"><path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 01.213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 00.167-.054l1.903-1.114a.864.864 0 01.717-.098 10.16 10.16 0 002.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 01-1.162 1.178A1.17 1.17 0 014.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 01-1.162 1.178 1.17 1.17 0 01-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 01.598.082l1.584.926a.272.272 0 00.14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 01-.023-.156.49.49 0 01.201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-7.062-6.122zm-2.036 2.87c.535 0 .969.44.969.982a.976.976 0 01-.969.983.976.976 0 01-.969-.983c0-.542.434-.981.97-.981zm4.842 0c.535 0 .969.44.969.982a.976.976 0 01-.969.983.976.976 0 01-.969-.983c0-.542.434-.981.97-.981z"/></svg>
+        <div class="qr-popup">
+          <img src="wechat-qr.png" alt="WeChat QR Code">
+          <div class="qr-label">扫码添加微信</div>
+        </div>
+      </a>
+    </div>
+    <div class="footer-copy">
+      &copy; 2026 Portfolio. Designed with passion & AI.
+    </div>
+  </footer>
+
+  <script>
+    // Scroll fade-in animation
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+    // Nav active state on scroll
+    const sections = document.querySelectorAll('section[id]');
+    window.addEventListener('scroll', () => {
+      const scrollY = window.scrollY + 100;
+      sections.forEach(sec => {
+        const top = sec.offsetTop;
+        const h = sec.offsetHeight;
+        const id = sec.getAttribute('id');
+        const link = document.querySelector('.nav-links a[href="#' + id + '"]');
+        if (link) {
+          if (scrollY >= top && scrollY < top + h) {
+            document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+            link.classList.add('active');
+          }
+        }
+      });
+    });
+
+    // Draw work covers
+    function drawCover(id, hue, type) {
+      const canvas = document.getElementById(id);
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      canvas.style.width = rect.width + 'px';
+      canvas.style.height = rect.height + 'px';
+      ctx.scale(dpr, dpr);
+      const W = rect.width, H = rect.height;
+
+      // Background gradient
+      const grad = ctx.createLinearGradient(0, 0, W, H);
+      grad.addColorStop(0, 'hsl(' + hue + ',30%,12%)');
+      grad.addColorStop(1, 'hsl(' + (hue + 30) + ',25%,8%)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+
+      if (type === 'road') {
+        // Road perspective
+        ctx.strokeStyle = 'hsla(' + hue + ',50%,50%,0.12)';
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < 8; i++) {
+          const y = H * 0.35 + i * 25;
+          const spread = (y - H * 0.35) / (H * 0.65) * W * 0.45;
+          ctx.beginPath();
+          ctx.moveTo(W / 2 - spread, y);
+          ctx.lineTo(W / 2 + spread, y);
+          ctx.stroke();
+        }
+        ctx.setLineDash([8, 12]);
+        ctx.beginPath();
+        ctx.moveTo(W / 2, H * 0.35);
+        ctx.lineTo(W / 2, H);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else if (type === 'grid') {
+        ctx.strokeStyle = 'hsla(' + hue + ',40%,40%,0.06)';
+        ctx.lineWidth = 1;
+        for (let x = 0; x < W; x += 30) {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+        }
+        for (let y = 0; y < H; y += 30) {
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+        }
+      } else if (type === 'dots') {
+        for (let i = 0; i < 30; i++) {
+          const x = Math.random() * W;
+          const y = Math.random() * H;
+          const r = 2 + Math.random() * 4;
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fillStyle = 'hsla(' + (hue + Math.random() * 40) + ',50%,60%,' + (0.1 + Math.random() * 0.15) + ')';
+          ctx.fill();
+        }
+      } else if (type === 'wave') {
+        ctx.strokeStyle = 'hsla(' + hue + ',50%,50%,0.15)';
+        ctx.lineWidth = 1.5;
+        for (let l = 0; l < 5; l++) {
+          ctx.beginPath();
+          for (let x = 0; x <= W; x += 3) {
+            const y = H / 2 + Math.sin(x * 0.02 + l * 1.2) * (20 + l * 8);
+            x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+      }
+
+      // Decorative glow
+      const glow = ctx.createRadialGradient(W * 0.3, H * 0.4, 0, W * 0.3, H * 0.4, W * 0.4);
+      glow.addColorStop(0, 'hsla(' + hue + ',60%,50%,0.06)');
+      glow.addColorStop(1, 'transparent');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    window.addEventListener('load', () => {
+      drawCover('c1', 220, 'road');
+      drawCover('c2', 200, 'grid');
+      drawCover('c3', 240, 'dots');
+      drawCover('c4', 260, 'wave');
+      drawCover('c5', 30, 'dots');
+      drawCover('c7', 200, 'grid');
+      drawCover('c8', 180, 'wave');
+      drawCover('c6', 270, 'wave');
+    });
+    window.addEventListener('resize', () => {
+      drawCover('c1', 220, 'road');
+      drawCover('c2', 200, 'grid');
+      drawCover('c3', 240, 'dots');
+      drawCover('c4', 260, 'wave');
+      drawCover('c5', 30, 'dots');
+      drawCover('c7', 200, 'grid');
+      drawCover('c8', 180, 'wave');
+      drawCover('c6', 270, 'wave');
+    });
+  </script>
+</body>
+</html>

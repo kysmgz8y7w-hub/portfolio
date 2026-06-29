@@ -1,0 +1,3316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>车端调试面板</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --viewport-w: 2560px;
+    --viewport-h: 1600px;
+    --bg-primary: #07090D;
+    --bg-surface: #0F1218;
+    --bg-card: #161B22;
+    --bg-card-hover: #1C2330;
+    --bg-input: #1A1F2B;
+    --border: #30363D;
+    --border-light: rgba(48,54,61,0.5);
+    --text-primary: #E6EDF3;
+    --text-secondary: #8B949E;
+    --text-muted: #6E7681;
+    --green: #00C853;
+    --green-bg: rgba(0,200,83,0.12);
+    --red: #FF5252;
+    --red-bg: rgba(255,82,82,0.12);
+    --yellow: #FFB300;
+    --yellow-bg: rgba(255,179,0,0.12);
+    --blue: #448AFF;
+    --blue-bg: rgba(68,138,255,0.12);
+    --cyan: #00BCD4;
+    --cyan-bg: rgba(0,188,212,0.12);
+    --orange: #FF9800;
+    --orange-bg: rgba(255,152,0,0.12);
+    --purple: #AB47BC;
+    --purple-bg: rgba(171,71,188,0.12);
+    --accent-teal: #26A69A;
+    --radius: 10px;
+    --radius-sm: 8px;
+    --radius-lg: 14px;
+    --radius-pill: 20px;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  }
+
+  html, body {
+    width: 100%; min-height: 100vh;
+    background: #0A0D14;
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ── Tablet Background ── */
+  .tablet-bg {
+    position: fixed; inset: 0;
+    background: linear-gradient(135deg, #0A0D14 0%, #0F131A 40%, #0D1117 100%);
+    z-index: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tablet-frame {
+    width: var(--viewport-w); height: var(--viewport-h);
+    background: #111620;
+    border-radius: 28px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 40px 120px rgba(0,0,0,0.6);
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tablet-frame::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(68,138,255,0.04) 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── Container ── */
+  .container {
+    width: 786px;
+    max-height: calc(var(--viewport-h) - 80px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 28px 30px;
+    position: relative; z-index: 1;
+    font-size: 14px;
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255,255,255,0.05);
+    box-shadow: 0 16px 64px rgba(0,0,0,0.35);
+  }
+  .container::-webkit-scrollbar { width: 5px; }
+  .container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+  .container::-webkit-scrollbar-track { background: transparent; }
+
+  /* ── Close Button ── */
+  .close-btn {
+    position: absolute; top: 14px; right: 16px;
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--green); border: none;
+    color: #fff; font-size: 20px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 10; transition: all 0.15s; font-weight: 700; line-height: 1;
+  }
+  .close-btn:hover { opacity: 0.85; transform: scale(1.08); }
+
+  /* ── Section ── */
+  .section { margin-bottom: 28px; }
+  .section-title {
+    font-size: 15px; font-weight: 700; color: var(--text-primary);
+    margin-bottom: 14px; display: flex; align-items: center; gap: 10px;
+  }
+  .section-title::before {
+    content: ''; width: 4px; height: 18px;
+    border-radius: 2px; background: var(--blue);
+    display: inline-block;
+  }
+
+  /* ═══════════车辆状态═══════════*/
+  .status-chips {
+    display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+    justify-content: space-between;
+  }
+  .status-chip {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 10px 18px; border-radius: var(--radius);
+    background: var(--bg-card); border: 1px solid var(--border);
+    font-size: 13px; font-weight: 600; cursor: default;
+    transition: all 0.15s; min-width: 110px;
+    text-align: center;
+  }
+  .status-chip .chip-icon { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; }
+  .status-chip.ok { border-color: var(--green); background: var(--green-bg); }
+  .status-chip.ok .chip-icon { color: var(--green); }
+  .status-chip.err { border-color: var(--red); background: var(--red-bg); }
+  .status-chip.err .chip-icon { color: var(--red); }
+  .status-chip.neutral { }
+  .status-chip.neutral .chip-icon { color: var(--text-muted); }
+
+  .info-cards {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+  }
+  .info-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 18px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .info-icon {
+    width: 36px; height: 36px; border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .info-icon.cpu { background: var(--cyan-bg); color: var(--cyan); }
+  .info-icon.gear { background: var(--blue-bg); color: var(--blue); }
+  .info-icon.car { background: var(--purple-bg); color: var(--purple); }
+  .info-icon.server { background: var(--orange-bg); color: var(--orange); }
+  .info-icon svg { width: 24px; height: 24px; }
+  .info-text { flex: 1; min-width: 0; }
+  .info-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+  .info-value {
+    font-size: 13px; color: var(--text-secondary); margin-top: 2px;
+    word-break: break-all; font-family: var(--font-mono);
+  }
+  .info-value.pending { color: var(--yellow); }
+
+  .info-input-row {
+    display: flex; align-items: center; gap: 14px;
+  }
+  .info-input-row input {
+    flex: 1; padding: 12px 16px; background: var(--bg-input);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text-primary); font-size: 14px; outline: none; font-family: var(--font-mono);
+  }
+  .info-input-row input:focus { border-color: var(--blue); }
+  .btn-sm {
+    padding: 12px 24px; background: var(--blue); color: #fff;
+    border: none; border-radius: var(--radius-sm); font-size: 14px;
+    cursor: pointer; font-weight: 600; white-space: nowrap;
+  }
+  .btn-sm:hover { opacity: 0.88; }
+
+  /* ═══════════开关选项 ═══════════*/
+  .toggle-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .toggle-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; background: var(--bg-card);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    transition: all 0.15s;
+  }
+  .toggle-item:hover { border-color: rgba(255,255,255,0.1); }
+  .toggle-left { display: flex; align-items: center; gap: 10px; }
+  .toggle-icon {
+    width: 34px; height: 34px; border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .toggle-icon.target { background: var(--yellow-bg); color: var(--yellow); }
+  .toggle-icon.upload { background: var(--blue-bg); color: var(--blue); }
+  .toggle-icon.nopic { background: var(--red-bg); color: var(--red); }
+  .toggle-icon.level { background: var(--green-bg); color: var(--green); }
+  .toggle-icon.question { background: var(--orange-bg); color: var(--orange); }
+  .toggle-icon.cloud { background: var(--cyan-bg); color: var(--cyan); }
+  .toggle-icon.purple { background: var(--purple-bg); color: var(--purple); }
+  .toggle-icon svg { width: 20px; height: 20px; }
+  .toggle-label { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+  .toggle-item.full { grid-column: span 2; }
+
+  /* Toggle Switch */
+  .switch { position: relative; display: inline-block; width: 50px; height: 30px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(255,255,255,0.08); transition: 0.25s; border-radius: 30px;
+    border: 1.5px solid rgba(255,255,255,0.1);
+  }
+  .slider::before {
+    content: ''; position: absolute; height: 22px; width: 22px;
+    left: 3px; bottom: 3px; background: #fff;
+    transition: 0.25s; border-radius: 50%;
+  }
+  input:checked + .slider::before { transform: translateX(20px); }
+
+  /* 开关颜色跟随图标联动*/
+  .t-yellow input:checked + .slider { background: var(--yellow); border-color: var(--yellow); }
+  .t-blue   input:checked + .slider { background: var(--blue);   border-color: var(--blue); }
+  .t-red    input:checked + .slider { background: var(--red);    border-color: var(--red); }
+  .t-green  input:checked + .slider { background: var(--green);  border-color: var(--green); }
+  .t-orange input:checked + .slider { background: var(--orange); border-color: var(--orange); }
+  .t-cyan   input:checked + .slider { background: var(--cyan);   border-color: var(--cyan); }
+  .t-purple input:checked + .slider { background: var(--purple); border-color: var(--purple); }
+
+  /* ═══════════功能测试 ═══════════*/
+  .func-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  }
+  .func-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 14px;
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer; transition: all 0.18s;
+  }
+  .func-card:hover { background: var(--bg-card-hover); border-color: rgba(255,255,255,0.12); transform: translateY(-2px); }
+  .func-icon {
+    width: 40px; height: 40px; border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .func-icon.f1 { background: var(--blue-bg); color: var(--blue); }    /* 小包测试 */
+  .func-icon.f2 { background: var(--green-bg); color: var(--green); }   /* ADAS标定 */
+  .func-icon.f3 { background: var(--purple-bg); color: var(--purple); } /* 线控自动化*/
+  .func-icon.f4 { background: var(--orange-bg); color: var(--orange); } /* 站点管理 */
+  .func-icon.f5 { background: var(--cyan-bg); color: var(--cyan); }     /* 路测工单 */
+  .func-icon.f6 { background: #FF80AB15; color: #FF80AB; }              /* 舒适性指标*/
+  .func-icon.f7 { background: var(--yellow-bg); color: var(--yellow); } /* 数据采集 */
+  .func-icon svg { width: 24px; height: 24px; }
+  .func-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+
+  /* ═══════════高级调试 ═══════════*/
+  .debug-list { display: flex; flex-direction: column; gap: 6px; }
+  .debug-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; background: var(--bg-card);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    cursor: pointer; transition: all 0.15s;
+  }
+  .debug-item:hover { background: var(--bg-card-hover); border-color: rgba(255,255,255,0.12); }
+  .debug-left { display: flex; align-items: center; gap: 10px; }
+  .debug-icon {
+    width: 34px; height: 34px; border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .debug-icon.d1 { background: var(--green-bg); color: var(--green); }
+  .debug-icon.d2 { background: rgba(171,71,188,0.12); color: var(--purple); }
+  .debug-icon.d3 { background: var(--blue-bg); color: var(--blue); }
+  .debug-icon svg { width: 20px; height: 20px; }
+  .debug-label { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+  .debug-arrow { color: var(--text-muted); font-size: 16px; }
+
+  /* ═══════════STATION TEST MODAL ═══════════*/
+  .main-overlay {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.78); z-index: 300;
+    justify-content: center; align-items: center;
+    backdrop-filter: blur(6px);
+  }
+  .main-overlay.active { display: flex; }
+
+  .main-modal {
+    width: 1680px; height: 920px;
+    background: #1A1B20; border-radius: 18px; overflow: hidden;
+    display: flex; flex-direction: column;
+    border: 1px solid rgba(255,255,255,0.07);
+    box-shadow: 0 28px 100px rgba(0,0,0,0.7);
+    animation: mainIn 0.3s cubic-bezier(0.16,1,0.3,1);
+  }
+  @keyframes mainIn { from { opacity:0; transform:scale(0.94) translateY(20px); } to { opacity:1; transform:scale(1) translateY(0); } }
+
+  .main-modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 28px; height: 64px; flex-shrink: 0;
+    border-bottom: 1px solid var(--border); background: var(--bg-card);
+  }
+  .main-modal-title { font-size: 20px; font-weight: 700; color: var(--text-primary); letter-spacing: 0.5px; }
+  .main-modal-close {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,0.06); border: none;
+    color: var(--text-secondary); font-size: 20px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+  }
+  .main-modal-close:hover { background: var(--red); color: #fff; }
+
+  .main-modal-body {
+    flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0 28px 28px 28px;
+  }
+  .main-modal-body::-webkit-scrollbar { width: 6px; }
+  .main-modal-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+
+  .topbar { display: flex; align-items: center; gap: 14px; padding: 18px 0; }
+  .search-wrap {
+    display: flex; align-items: center; background: var(--bg-input);
+    border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+    flex: 1; min-width: 280px; max-width: 500px;
+  }
+  .search-wrap svg { width:20px; height:20px; margin-left:14px; color:var(--text-muted); flex-shrink:0; }
+  .search-wrap input { flex:1; background:transparent; border:none; outline:none; padding:12px 14px; color:var(--text-primary); font-size:14px; }
+  .search-wrap input::placeholder { color:var(--text-muted); }
+  .btn-confirm { padding:12px 24px; background:var(--blue); color:#fff; border:none; border-radius:0 var(--radius) var(--radius) 0; font-size:14px; cursor:pointer; font-weight:600; }
+  .btn-group { display:flex; gap:8px; }
+  .btn-tag { padding:10px 20px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--bg-input); color:var(--text-secondary); font-size:13px; cursor:pointer; white-space:nowrap; transition:all .15s; font-weight:500; }
+  .btn-tag:hover { background:var(--bg-card-hover); color:var(--text-primary); }
+  .btn-tag.active { border-color:var(--blue); color:var(--blue); background:var(--blue-bg); }
+  .btn-refresh { padding:10px 20px; border-radius:var(--radius-sm); border:none; background:var(--blue); color:#fff; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; white-space:nowrap; font-weight:600; }
+
+  .summary-bar { display:flex; gap:16px; margin-bottom:20px; }
+  .summary-card { flex:1; min-width:200px; background:var(--bg-card); border-radius:var(--radius-lg); padding:20px 24px; display:flex; align-items:center; gap:16px; }
+  .summary-icon2 { width:48px; height:48px; border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .summary-icon2.t { background:var(--blue-bg); color:var(--blue); }
+  .summary-icon2.p { background:var(--green-bg); color:var(--green); }
+  .summary-icon2.f { background:var(--red-bg); color:var(--red); }
+  .summary-icon2.w { background:var(--yellow-bg); color:var(--yellow); }
+  .summary-icon2 svg { width:24px; height:24px; }
+  .summary-info { display:flex; flex-direction:column; }
+  .summary-label { font-size:12px; color:var(--text-muted); font-weight:500; }
+  .summary-value { font-size:30px; font-weight:700; color:var(--text-primary); }
+
+  .view-toggle-bar { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+  .view-toggle-group { display:flex; background:var(--bg-card); border-radius:var(--radius); overflow:hidden; border:1px solid var(--border); }
+  .view-toggle-btn { padding:10px 24px; background:transparent; border:none; color:var(--text-muted); font-size:14px; cursor:pointer; display:flex; align-items:center; gap:8px; transition:all .2s; font-weight:500; }
+  .view-toggle-btn:first-child { border-right:1px solid var(--border); }
+  .view-toggle-btn.active2 { background:var(--blue-bg); color:var(--blue); }
+  .view-toggle-btn:hover:not(.active2) { color:var(--text-secondary); }
+  .view-toggle-btn svg { width:18px; height:18px; }
+  .station-count-text { font-size:13px; color:var(--text-muted); }
+
+  .view-cards { display:none; }
+  .view-cards.active { display:block; }
+  .station-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:16px; }
+  .station-card {
+    background:#1C2330; border-radius:var(--radius-lg); padding:22px;
+    transition:all .15s; border:1px solid var(--border);
+  }
+  .station-card:hover { background:#202836; border-color:rgba(255,255,255,.12); transform:translateY(-2px); }
+  .card-header { display:flex; align-items:flex-start; gap:12px; margin-bottom:16px; }
+  .card-index { width:32px; height:32px; border-radius:var(--radius-sm); background:var(--bg-input); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:var(--text-muted); flex-shrink:0; }
+  .card-name { flex:1; font-size:14px; line-height:1.55; color:var(--text-primary); word-break:break-all; font-weight:500; }
+  .card-pos { font-size:12px; color:var(--text-muted); font-family:var(--font-mono); margin-top:3px; }
+  .card-nav-btn { display:inline-flex; align-items:center; gap:6px; padding:7px 16px; background:var(--blue); color:#fff; border:none; border-radius:var(--radius-sm); font-size:12px; cursor:pointer; flex-shrink:0; font-weight:500; }
+  .card-divider { height:1px; background:var(--border-light); margin:0 0 16px 0; }
+  .card-status-row { display:flex; gap:10px; }
+  .status-btn { flex:1; min-width:100px; padding:14px 10px; border-radius:var(--radius-sm); border:1.5px solid var(--border); background:var(--bg-input); color:var(--text-secondary); font-size:12px; cursor:pointer; text-align:center; transition:all .15s; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .status-btn:hover { border-color:var(--text-muted); background:var(--bg-card-hover); }
+  .status-btn .sb-label { font-size:11px; color:var(--text-muted); font-weight:500; }
+  .status-btn .sb-val { font-size:15px; font-weight:700; }
+  .status-btn.bs .sb-val { color:var(--green); }
+  .status-btn.bf .sb-val { color:var(--red); }
+  .status-btn.bs:hover { border-color:var(--green); background:var(--green-bg); }
+  .status-btn.bf:hover { border-color:var(--red); background:var(--red-bg); }
+  .card-footer { display:flex; justify-content:space-between; align-items:center; margin-top:14px; }
+  .verify-btn { padding:7px 18px; border-radius:var(--radius-sm); border:1px solid var(--border); background:transparent; color:var(--text-secondary); font-size:12px; cursor:pointer; transition:all .15s; font-weight:500; }
+  .verify-btn:hover { border-color:var(--text-muted); color:var(--text-primary); background:var(--bg-input); }
+  .result-badge { display:inline-flex; align-items:center; gap:6px; padding:5px 14px; border-radius:20px; font-size:12px; font-weight:600; }
+  .result-badge.pass { background:var(--green-bg); color:var(--green); }
+  .result-badge.fail { background:var(--red-bg); color:var(--red); }
+  .result-badge.invalid { background:var(--yellow-bg); color:var(--yellow); }
+  .result-badge.pending { background:var(--bg-input); color:var(--text-muted); }
+  .result-dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+  .result-dot.pass { background:var(--green); }
+  .result-dot.fail { background:var(--red); }
+  .result-dot.invalid { background:var(--yellow); }
+  .result-dot.pending { background:var(--text-muted); }
+
+  .view-table { display:none; }
+  .view-table.active { display:block; }
+  .table-wrap { background:var(--bg-card); border-radius:var(--radius-lg); overflow-x:auto; border:1px solid var(--border); }
+  .data-table { width:100%; border-collapse:collapse; min-width:1300px; }
+  .data-table thead th { position:sticky; top:0; background:var(--bg-input); padding:16px 20px; font-size:12px; font-weight:600; color:var(--text-muted); text-align:left; white-space:nowrap; border-bottom:1px solid var(--border); text-transform:uppercase; letter-spacing:.5px; }
+  .data-table thead th:first-child { border-radius:var(--radius-lg) 0 0 0; }
+  .data-table thead th:last-child { border-radius:0 var(--radius-lg) 0 0; }
+  .data-table tbody td { padding:16px 20px; font-size:14px; border-bottom:1px solid var(--border-light); vertical-align:middle; color:var(--text-primary); }
+  .data-table tbody tr:last-child td { border-bottom:none; }
+  .data-table tbody tr:hover { background:var(--bg-card-hover); }
+  .td-idx { color:var(--text-muted); font-weight:600; width:60px; }
+  .td-name { max-width:360px; word-break:break-all; font-weight:500; color:var(--text-primary); }
+  .td-pos { font-family:var(--font-mono); font-size:13px; color:var(--text-secondary); white-space:nowrap; }
+  .td-nav-btn { display:inline-flex; align-items:center; gap:5px; padding:7px 16px; background:var(--blue); color:#fff; border:none; border-radius:var(--radius-sm); font-size:12px; cursor:pointer; white-space:nowrap; font-weight:500; }
+  .td-status-btn { display:inline-flex; align-items:center; gap:5px; padding:7px 16px; border-radius:var(--radius-sm); border:1.5px solid var(--border); background:var(--bg-input); font-size:12px; cursor:pointer; white-space:nowrap; transition:all .15s; font-weight:600; }
+  .td-status-btn:hover { background:var(--bg-card-hover); }
+  .td-status-btn.success { color:var(--green); }
+  .td-status-btn.fail { color:var(--red); }
+  .td-status-btn.success:hover { border-color:var(--green); background:var(--green-bg); }
+  .td-status-btn.fail:hover { border-color:var(--red); background:var(--red-bg); }
+  .td-verify-btn { padding:7px 16px; border-radius:var(--radius-sm); border:1px solid var(--border); background:transparent; color:var(--text-secondary); font-size:12px; cursor:pointer; white-space:nowrap; transition:all .15s; font-weight:500; }
+  .td-verify-btn:hover { border-color:var(--text-muted); color:var(--text-primary); background:var(--bg-input); }
+
+  /* ── Sub Modal (tag) ── */
+  .modal-overlay {
+    display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+    background:rgba(0,0,0,.72); z-index:400;
+    justify-content:center; align-items:center;
+    backdrop-filter:blur(4px);
+  }
+  .modal-overlay.active { display:flex; }
+  .modal {
+    background:#1E1E1E; border-radius:var(--radius-lg);
+    width:100%; max-width:720px; max-height:85vh;
+    display:flex; flex-direction:column; overflow:hidden;
+    border:1px solid rgba(255,255,255,.08);
+    animation:modalIn .25s cubic-bezier(.16,1,.3,1);
+    box-shadow:0 24px 80px rgba(0,0,0,.6);
+  }
+  @keyframes modalIn { from{opacity:0;transform:scale(.94) translateY(16px)} to{opacity:1;transform:scale(1) translateY(0)} }
+  .modal-header { display:flex; align-items:center; justify-content:space-between; padding:18px 24px; flex-shrink:0; }
+  .modal-title2 { font-size:18px; font-weight:700; color:var(--text-primary); }
+  .modal-close { width:32px; height:32px; border-radius:50%; border:none; background:var(--green); color:#fff; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; font-weight:700; line-height:1; }
+  .modal-close:hover { opacity:.85; transform:scale(1.05); }
+  .modal-body { flex:1; overflow-y:auto; padding:6px 24px 20px; }
+  .modal-body::-webkit-scrollbar { width:4px; }
+  .modal-body::-webkit-scrollbar-thumb { background:rgba(255,255,255,.12); border-radius:2px; }
+  .modal-section { margin-bottom:20px; }
+  .modal-section:last-child { margin-bottom:0; }
+  .section-header { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .section-icon2 { width:18px; height:18px; border-radius:50%; flex-shrink:0; }
+  .section-icon2.red { background:#FF5252; }
+  .section-icon2.blue { background:#448AFF; }
+  .section-icon2.green { background:#69F0AE; }
+  .section-icon2.yellow { background:#FFD740; }
+  .section-icon2.purple { background:#AB47BC; }
+  .section-title2 { font-size:14px; font-weight:700; color:var(--text-primary); }
+  .modal-sub-title { font-size:12px; font-weight:600; color:var(--text-secondary); margin:10px 0 6px 0; padding-left:26px; }
+  .tag-grid { display:flex; flex-wrap:wrap; gap:8px; }
+  .tag-chip { padding:7px 16px; border-radius:var(--radius-pill); font-size:13px; cursor:pointer; user-select:none; transition:all .18s; font-weight:500; white-space:nowrap; border:1.5px solid transparent; }
+  .tag-chip.red { background:rgba(255,82,82,.1); color:#FF8A80; }
+  .tag-chip.red:hover { background:rgba(255,82,82,.18); }
+  .tag-chip.red.selected { background:#FF5252; color:#fff; border-color:#FF5252; box-shadow:0 0 12px rgba(255,82,82,.25); }
+  .tag-chip.blue { background:rgba(68,138,255,.1); color:#82B1FF; }
+  .tag-chip.blue:hover { background:rgba(68,138,255,.18); }
+  .tag-chip.blue.selected { background:#448AFF; color:#fff; border-color:#448AFF; box-shadow:0 0 12px rgba(68,138,255,.25); }
+  .tag-chip.green { background:rgba(105,240,174,.1); color:#B9F6CA; }
+  .tag-chip.green:hover { background:rgba(105,240,174,.18); }
+  .tag-chip.green.selected { background:#69F0AE; color:#1b5e20; border-color:#69F0AE; box-shadow:0 0 12px rgba(105,240,174,.25); }
+  .tag-chip.yellow { background:rgba(255,215,64,.1); color:#FFE57F; }
+  .tag-chip.yellow:hover { background:rgba(255,215,64,.18); }
+  .tag-chip.yellow.selected { background:#FFD740; color:#5d4037; border-color:#FFD740; box-shadow:0 0 12px rgba(255,215,64,.25); }
+  .tag-chip.purple { background:rgba(171,71,188,.1); color:#CE93D8; }
+  .tag-chip.purple:hover { background:rgba(171,71,188,.18); }
+  .tag-chip.purple.selected { background:#AB47BC; color:#fff; border-color:#AB47BC; box-shadow:0 0 12px rgba(171,71,188,.25); }
+  .modal-remark { margin-top:16px; }
+  .modal-remark label { font-size:12px; color:var(--text-muted); display:block; margin-bottom:7px; font-weight:500; }
+  .modal-remark textarea { width:100%; min-height:68px; padding:12px 14px; background:rgba(255,255,255,.04); border:1.5px solid rgba(255,255,255,.08); border-radius:var(--radius-sm); color:var(--text-primary); font-size:14px; resize:vertical; outline:none; font-family:var(--font-sans); }
+  .modal-remark textarea:focus { border-color:rgba(255,255,255,.2); }
+  .modal-footer { display:flex; gap:10px; padding:16px 24px; border-top:1px solid rgba(255,255,255,.06); flex-shrink:0; }
+  .modal-footer .btn { flex:1; padding:11px 0; border-radius:var(--radius-sm); font-size:14px; font-weight:600; cursor:pointer; text-align:center; transition:all .15s; border:none; }
+  .modal-footer .btn-primary { background:var(--blue); color:#fff; }
+  .modal-footer .btn-secondary { background:rgba(255,255,255,.06); color:var(--text-secondary); }
+  .modal-footer .btn-secondary:hover { background:rgba(255,255,255,.1); color:var(--text-primary); }
+  .modal-footer .btn-reset { background:rgba(68,138,255,.12); color:#82B1FF; }
+  .modal-footer .btn-reset:hover { background:rgba(68,138,255,.2); }
+
+  /* ═══════════ DATA COLLECT MODAL ═══════════ */
+  .dc-overlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,.78); z-index:300;
+    justify-content:center; align-items:center;
+    backdrop-filter:blur(6px);
+  }
+  .dc-overlay.active { display:flex; }
+
+  .dc-modal {
+    width:1400px; max-width:96vw; height:860px; max-height:92vh;
+    background:#07090D; border-radius:18px; overflow:hidden;
+    display:flex; flex-direction:column;
+    border:1px solid rgba(255,255,255,.07);
+    box-shadow:0 28px 100px rgba(0,0,0,.7);
+    animation:mainIn .3s cubic-bezier(.16,1,.3,1);
+  }
+
+  .dc-header {
+    display:flex; align-items:center;
+    padding:0 24px; height:52px; flex-shrink:0;
+    border-bottom:1px solid var(--border); background:var(--bg-card);
+  }
+  .dc-header-left { display:flex; align-items:center; gap:14px; }
+  .dc-header-title { font-size:17px; font-weight:700; margin-right:6px; }
+  .dc-agent-tag {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:5px 14px; border-radius:var(--radius-pill);
+    border:1px solid rgba(0,200,83,.2); background:rgba(0,200,83,.06);
+    font-size:12px; font-weight:500; color:var(--green);
+  }
+  .dc-agent-tag .ag-dot { width:6px; height:6px; border-radius:50%; background:var(--green); }
+  .dc-time-group {
+    display:flex; gap:24px; margin-left:24px;
+  }
+  .dc-time-item { display:flex; flex-direction:column; }
+  .dc-time-label { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
+  .dc-time-val { font-size:12px; color:var(--text-secondary); font-family:var(--font-mono); margin-top:1px; }
+  .dc-header-spacer { flex:1; }
+  .dc-modal-close {
+    width:36px; height:36px; border-radius:50%;
+    background:rgba(255,255,255,.06); border:none;
+    color:var(--text-secondary); font-size:20px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; transition:all .15s;
+  }
+  .dc-modal-close:hover { background:var(--red); color:#fff; }
+
+  .dc-body { display:flex; flex:1; overflow:hidden; }
+
+  /* Left Panel */
+  .dc-left {
+    width:360px; border-right:1px solid var(--border);
+    display:flex; flex-direction:column; flex-shrink:0;
+  }
+  .dc-left-tabs {
+    display:flex; padding:0 16px; border-bottom:1px solid var(--border);
+  }
+  .dc-ltab {
+    padding:13px 18px; font-size:14px; font-weight:500;
+    color:var(--text-secondary); cursor:pointer; position:relative;
+  }
+  .dc-ltab.active { color:var(--text-primary); }
+  .dc-ltab.active::after {
+    content:''; position:absolute; bottom:0; left:18px; right:18px;
+    height:2px; border-radius:2px; background:var(--blue);
+  }
+
+  .dc-left-body {
+    flex:1; overflow-y:auto; padding:0;
+    scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.04) transparent;
+  }
+
+  /* Stats bar at top */
+  .dc-stats-bar {
+    display:grid; grid-template-columns:repeat(4,1fr);
+    border-bottom:1px solid var(--border); flex-shrink:0;
+    background:#1a1f2b;
+  }
+  .dc-stat-cell {
+    padding:10px 12px; text-align:center;
+    border-right:1px solid var(--border);
+  }
+  .dc-stat-cell:last-child { border-right:none; }
+  .dc-stat-cell .st-label { font-size:10px; color:var(--text-muted); }
+  .dc-stat-cell .st-val { font-size:15px; font-weight:700; font-family:var(--font-mono); margin-top:2px; color:var(--text-primary); }
+
+  /* Section groups inside left body */
+  .dc-section-group { padding:12px 16px; border-bottom:1px solid var(--border); }
+
+  /* Left tab pane switching */
+  .dc-left-pane { display:none; flex-direction:column; flex:1; overflow:hidden; }
+  .dc-left-pane.active { display:flex; }
+
+  /* System info log style */
+  .dc-sysinfo {
+    flex:1; overflow-y:auto; padding:14px 16px;
+    font-family:var(--font-mono); font-size:12px; line-height:1.9;
+    color:var(--text-secondary);
+    scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.04) transparent;
+  }
+  .dc-sysinfo .sys-time { color:var(--text-muted); }
+  .dc-sysinfo .sys-ok { color:var(--green); }
+  .dc-sysinfo .sys-err { color:var(--red); }
+  .dc-sysinfo .sys-divider { color:var(--text-muted); opacity:.3; }
+  .dc-sysinfo .sys-topic { display:flex; gap:6px; }
+  .dc-sysinfo .sys-topic .t-status { min-width:28px; }
+  .dc-sysinfo .sys-topic .t-name { color:var(--text-secondary); flex:1; }
+  .dc-sysinfo .sys-topic .t-hz { color:var(--text-primary); text-align:right; min-width:60px; }
+  .dc-section-label {
+    font-size:13px; font-weight:700; color:var(--text-primary);
+    margin-bottom:10px; padding-bottom:6px;
+    border-bottom:1px solid rgba(255,255,255,.04);
+  }
+
+  .dc-info-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:7px 0; transition:background .1s;
+  }
+  .dc-info-row:hover { background:rgba(255,255,255,.02); margin:0 -8px; padding:7px 8px; border-radius:4px; }
+  .dc-info-key { font-size:13px; color:var(--text-secondary); }
+  .dc-info-val { font-size:13px; font-family:var(--font-mono); font-weight:500; white-space:nowrap; }
+  .dc-info-val.ok { color:var(--green); }
+  .dc-info-val.err { color:var(--red); }
+  .dc-info-val.num { color:var(--text-primary); }
+  .dc-info-val.warn { color:var(--yellow); }
+
+  .dc-ctrl-section {
+    padding:16px 16px; border-top:1px solid var(--border); flex-shrink:0;
+  }
+  .dc-ctrl-label {
+    font-size:14px; color:var(--text-primary); font-weight:600;
+    margin-bottom:12px;
+  }
+  .dc-ctrl-row { display:flex; gap:10px; margin-bottom:16px; align-items:center; }
+  .dc-select {
+    position:relative; display:inline-block; min-width:120px;
+  }
+  .dc-select-btn {
+    padding:10px 32px 10px 18px; border-radius:8px; border:1px solid var(--border);
+    background:var(--bg-card); color:var(--text-primary);
+    font-size:14px; font-weight:500; cursor:pointer; outline:none;
+    width:100%; text-align:left; position:relative;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .dc-select-btn::after {
+    content:''; position:absolute; right:12px; top:50%; transform:translateY(-50%);
+    border-left:4px solid transparent; border-right:4px solid transparent;
+    border-top:5px solid var(--text-muted);
+  }
+  .dc-select-btn:hover { border-color:rgba(255,255,255,.12); }
+  .dc-select-dropdown {
+    display:none; position:absolute; top:100%; left:0; right:0;
+    margin-top:4px; background:#161B22; border:1px solid var(--border);
+    border-radius:8px; overflow:hidden; z-index:50;
+    box-shadow:0 8px 24px rgba(0,0,0,.4);
+  }
+  .dc-select.open .dc-select-dropdown { display:block; }
+  .dc-select-opt {
+    padding:10px 18px; font-size:14px; color:var(--text-secondary);
+    cursor:pointer; transition:all .1s;
+  }
+  .dc-select-opt:hover { background:rgba(255,255,255,.06); color:var(--text-primary); }
+  .dc-select-opt.active { color:var(--blue); background:var(--blue-bg); }
+  .dc-device {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 14px; border-radius:8px;
+    background:var(--bg-card); border:1px solid var(--border);
+    margin-bottom:6px;
+  }
+  .dc-dev-dot {
+    width:10px; height:10px; border-radius:50%; flex-shrink:0;
+  }
+  .dc-dev-dot.on { background:var(--green); box-shadow:0 0 6px rgba(0,200,83,.3); }
+  .dc-dev-dot.off { background:var(--text-muted); }
+  .dc-dev-name { font-size:13px; flex:1; }
+  .dc-dev-check {
+    width:22px; height:22px; border-radius:5px;
+    border:2px solid rgba(255,255,255,.12);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:all .15s;
+  }
+  .dc-dev-check.checked { background:var(--blue); border-color:var(--blue); }
+  .dc-dev-check svg { width:12px; height:12px; fill:#fff; opacity:0; }
+  .dc-dev-check.checked svg { opacity:1; }
+
+  .dc-left-footer {
+    display:flex; gap:12px; padding:16px 16px;
+    border-top:1px solid var(--border); flex-shrink:0;
+  }
+  .dc-foot-btn {
+    flex:1; padding:14px; border-radius:var(--radius-sm); border:none;
+    font-size:15px; font-weight:600; cursor:pointer; text-align:center; transition:all .15s;
+  }
+  .dc-foot-btn:hover { opacity:.88; }
+  .dc-foot-btn.outline { background:rgba(255,255,255,.04); color:var(--text-secondary); border:1px solid var(--border); }
+  .dc-foot-btn.green-btn { background:var(--blue); color:#fff; }
+
+  /* Right Panel */
+  .dc-right { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+
+  .dc-right-tabs {
+    display:flex; align-items:center; padding:0 20px;
+    border-bottom:1px solid var(--border); flex-shrink:0;
+  }
+  .dc-rtab {
+    padding:13px 20px; font-size:14px; font-weight:500;
+    color:var(--text-secondary); cursor:pointer; position:relative;
+  }
+  .dc-rtab.active { color:var(--text-primary); }
+  .dc-rtab.active::after {
+    content:''; position:absolute; bottom:0; left:20px; right:20px;
+    height:2px; border-radius:2px; background:var(--blue);
+  }
+  .dc-rtabs-spacer { flex:1; }
+  .dc-btn-clear {
+    padding:7px 16px; border-radius:8px;
+    border:1px solid rgba(255,82,82,.2);
+    background:rgba(255,82,82,.06);
+    color:var(--red); font-size:12px; font-weight:600;
+    cursor:pointer; transition:all .12s;
+  }
+  .dc-btn-clear:hover { background:rgba(255,82,82,.12); }
+
+  .dc-sub-tabs {
+    display:flex; gap:4px; padding:10px 20px;
+    border-bottom:1px solid var(--border); flex-shrink:0;
+  }
+  .dc-stab {
+    padding:6px 18px; border-radius:8px; font-size:12px; font-weight:500;
+    color:var(--text-muted); cursor:pointer; border:1px solid transparent;
+    transition:all .12s;
+  }
+  .dc-stab.active { background:var(--blue-bg); color:var(--blue); border-color:rgba(68,138,255,.15); }
+
+  /* ═══════════ Soc Topic Table ═══════════ */
+  .dc-topic-wrap { display:flex; flex-direction:column; flex:1; overflow:hidden; }
+  .dc-topic-header {
+    padding:12px 20px; border-bottom:1px solid var(--border);
+    font-size:12px; color:var(--text-muted); font-family:var(--font-mono);
+    flex-shrink:0;
+  }
+  .dc-topic-header strong { color:var(--text-primary); font-weight:600; }
+  .dc-topic-cols {
+    display:flex; padding:10px 20px; border-bottom:1px solid var(--border);
+    font-size:11px; font-weight:600; color:var(--text-muted);
+    text-transform:uppercase; letter-spacing:.5px; flex-shrink:0;
+    background:#1a1f2b;
+  }
+  .dc-topic-cols .tc-name { flex:1; }
+  .dc-topic-cols .tc-hz { width:100px; text-align:right; }
+
+  .dc-topic-list {
+    flex:1; overflow-y:auto; font-family:var(--font-mono); font-size:13px;
+    scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.04) transparent;
+  }
+  .dc-topic-row {
+    display:flex; align-items:center; padding:12px 20px;
+    border-bottom:1px solid var(--border-light);
+    transition:background .08s;
+  }
+  .dc-topic-row:hover { background:var(--bg-card-hover); }
+  .dc-topic-row .tr-status {
+    width:24px; height:24px; border-radius:6px; flex-shrink:0; margin-right:12px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; font-weight:700; color:#fff;
+  }
+  .dc-topic-row .tr-status.ok { color:var(--green); }
+  .dc-topic-row .tr-status.err { color:var(--red); }
+  .dc-topic-row .tr-status.warn { color:var(--yellow); }
+  .dc-topic-row .tr-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; font-weight:500; }
+  .dc-topic-row.ok-row .tr-name { color:var(--green); }
+  .dc-topic-row.err-row .tr-name { color:var(--text-muted); }
+  .dc-topic-row.warn-row .tr-name { color:var(--text-muted); }
+  .dc-topic-row .tr-hz { width:100px; text-align:right; color:var(--text-primary); font-weight:600; font-size:14px; }
+
+  .dc-topic-footer {
+    display:flex; align-items:center; gap:14px;
+    padding:8px 20px; border-top:1px solid var(--border);
+    font-size:11px; color:var(--text-muted); flex-shrink:0;
+  }
+  .dc-topic-footer .tf-stat { display:flex; align-items:center; gap:4px; }
+  .dc-topic-footer .tf-dot { width:6px; height:6px; border-radius:50%; }
+
+  .dc-tag-content {
+    flex:1; overflow-y:auto; padding:14px 20px;
+    scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.04) transparent;
+  }
+
+  .dc-tgroup {
+    margin-bottom:14px; background:#161B22;
+    border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden;
+  }
+  .dc-tgroup-header {
+    display:flex; align-items:center; padding:13px 16px;
+    cursor:pointer; transition:background .1s;
+  }
+  .dc-tgroup-header:hover { background:rgba(255,255,255,.02); }
+
+  .dc-tg-check {
+    width:20px; height:20px; border-radius:6px;
+    border:2px solid rgba(255,255,255,.1);
+    display:flex; align-items:center; justify-content:center;
+    margin-right:12px; flex-shrink:0; cursor:pointer;
+  }
+  .dc-tg-check.checked { background:var(--blue); border-color:var(--blue); }
+  .dc-tg-check svg { width:12px; height:12px; fill:#fff; opacity:0; }
+  .dc-tg-check.checked svg { opacity:1; }
+
+  .dc-tg-title { font-size:14px; font-weight:500; flex:1; color:var(--text-primary); }
+  .dc-tg-arrow {
+    color:var(--text-muted); font-size:12px; transition:transform .2s;
+  }
+  .dc-tgroup.open .dc-tg-arrow { transform:rotate(180deg); }
+
+  .dc-tgroup-body { display:none; padding:0 16px 14px; }
+  .dc-tgroup.open .dc-tgroup-body { display:block; }
+
+  .dc-chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .dc-chip {
+    display:flex; align-items:center; gap:7px;
+    padding:8px 16px; border-radius:var(--radius-pill);
+    font-size:13px; font-weight:500; cursor:pointer;
+    transition:all .18s; border:1.5px solid transparent;
+    background:rgba(68,138,255,.08); color:#82B1FF;
+  }
+  .dc-chip:hover { background:rgba(68,138,255,.15); }
+  .dc-chip.selected { background:var(--blue); color:#fff; border-color:var(--blue); box-shadow:0 0 12px rgba(68,138,255,.25); }
+
+  .dc-chip.green-chip { background:rgba(105,240,174,.08); color:#B9F6CA; }
+  .dc-chip.green-chip:hover { background:rgba(105,240,174,.15); }
+  .dc-chip.green-chip.selected { background:#69F0AE; color:#1b5e20; border-color:#69F0AE; box-shadow:0 0 12px rgba(105,240,174,.25); }
+
+  .dc-chip.purple-chip { background:rgba(171,71,188,.08); color:#CE93D8; }
+  .dc-chip.purple-chip:hover { background:rgba(171,71,188,.15); }
+  .dc-chip.purple-chip.selected { background:#AB47BC; color:#fff; border-color:#AB47BC; box-shadow:0 0 12px rgba(171,71,188,.25); }
+
+  .dc-sub-label {
+    font-size:12px; font-weight:600; color:var(--text-secondary);
+    margin:10px 0 6px 0; padding-left:4px;
+  }
+
+  /* Radio buttons for disk selection */
+  .dc-radio-group { display:flex; gap:24px; margin-top:6px; padding-top:16px; border-top:1px solid var(--border); }
+  .dc-radio-label {
+    display:flex; align-items:center; gap:10px;
+    font-size:14px; color:var(--text-primary); cursor:pointer;
+    padding:8px 0; min-height:40px;
+  }
+  .dc-radio-circle {
+    width:22px; height:22px; border-radius:50%;
+    border:2px solid rgba(255,255,255,.15);
+    display:flex; align-items:center; justify-content:center;
+    transition:all .2s; flex-shrink:0;
+  }
+  .dc-radio-circle::after {
+    content:''; width:10px; height:10px; border-radius:50%;
+    background:transparent; transition:all .2s;
+  }
+  .dc-radio-label input { display:none; }
+  .dc-radio-label input:checked ~ .dc-radio-circle { border-color:var(--blue); }
+  .dc-radio-label input:checked ~ .dc-radio-circle::after { background:var(--blue); }
+
+  /* Tag tab content: scene grid */
+  .dc-scene-grid {
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr));
+    gap:6px;
+  }
+  .dc-scene-item {
+    display:flex; align-items:center; gap:8px;
+    padding:9px 12px; border-radius:8px;
+    font-size:13px; color:var(--text-secondary);
+    cursor:pointer; transition:all .12s;
+  }
+  .dc-scene-item:hover { background:rgba(255,255,255,.03); color:var(--text-primary); }
+  .dc-scene-check {
+    width:18px; height:18px; border-radius:4px;
+    border:1.5px solid rgba(255,255,255,.12);
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; transition:all .15s;
+  }
+  .dc-scene-item.checked .dc-scene-check {
+    background:var(--blue); border-color:var(--blue);
+  }
+  .dc-scene-check svg { width:11px; height:11px; fill:#fff; opacity:0; }
+  .dc-scene-item.checked .dc-scene-check svg { opacity:1; }
+  .dc-scene-item.checked { color:var(--text-primary); }
+
+  /* Tab pane switching */
+  .dc-tab-pane { display:none; }
+  .dc-tab-pane.active { display:flex; flex-direction:column; flex:1; overflow:hidden; }
+
+  /* ═══════════ Video Tab ═══════════ */
+  .dc-video-wrap {
+    display:flex; flex:1; overflow:hidden;
+  }
+  .dc-cam-list {
+    width:150px; flex-shrink:0; overflow-y:auto; padding:8px;
+    display:flex; flex-direction:column; gap:8px;
+    scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.04) transparent;
+    border-right:1px solid var(--border);
+  }
+  .dc-cam-btn {
+    padding:14px 10px; border-radius:var(--radius-sm);
+    border:none; background:var(--bg-card);
+    color:var(--text-secondary); font-size:14px; font-weight:500;
+    cursor:pointer; transition:all .12s; text-align:center;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .dc-cam-btn:hover { background:var(--bg-card-hover); color:var(--text-primary); }
+  .dc-cam-btn:active { transform:scale(.97); }
+  .dc-cam-btn.active { background:var(--blue); color:#fff; }
+
+  .dc-video-area {
+    flex:1; display:flex; align-items:center; justify-content:center;
+    background:#0a0a14; position:relative; overflow:hidden;
+  }
+
+  .dc-video-canvas { width:100%; height:100%; }
+
+  .dc-video-overlay {
+    position:absolute; top:12px; left:12px; right:12px;
+    display:flex; align-items:center; justify-content:space-between;
+    pointer-events:none;
+  }
+  .dc-video-badge {
+    padding:5px 14px; border-radius:var(--radius-sm);
+    background:rgba(0,0,0,.55); backdrop-filter:blur(8px);
+    font-size:12px; font-weight:600; color:#fff;
+    display:flex; align-items:center; gap:6px;
+  }
+  .dc-video-badge .live-dot {
+    width:7px; height:7px; border-radius:50%;
+    background:var(--red); animation:dcBlink 1.2s ease-in-out infinite;
+  }
+  @keyframes dcBlink { 0%,100%{opacity:1}50%{opacity:.3} }
+
+  /* ═══════════ Log Tab ═══════════ */
+  .dc-log-wrap { display:flex; flex-direction:column; flex:1; overflow:hidden; }
+  .dc-log-toolbar {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 20px; border-bottom:1px solid var(--border); flex-shrink:0;
+  }
+  .dc-log-filter {
+    padding:7px 18px; border-radius:var(--radius-sm);
+    border:1px solid var(--border); background:var(--bg-card);
+    color:var(--text-secondary); font-size:13px; font-weight:500;
+    cursor:pointer; transition:all .12s;
+  }
+  .dc-log-filter:hover { background:var(--bg-card-hover); }
+  .dc-log-filter.active { background:var(--blue-bg); border-color:rgba(68,138,255,.2); color:var(--blue); }
+  .dc-log-search {
+    flex:1; max-width:240px; padding:7px 14px; border-radius:var(--radius-sm);
+    border:1px solid var(--border); background:var(--bg-input);
+    color:var(--text-primary); font-size:13px; outline:none;
+    margin-left:auto;
+  }
+  .dc-log-search::placeholder { color:var(--text-muted); }
+  .dc-log-search:focus { border-color:rgba(68,138,255,.3); }
+
+  .dc-log-list {
+    flex:1; overflow-y:auto; font-family:var(--font-mono); font-size:12px;
+    scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.04) transparent;
+  }
+  .dc-log-row {
+    display:flex; align-items:center; gap:10px;
+    padding:8px 20px; border-bottom:1px solid rgba(255,255,255,.02);
+    transition:background .08s;
+  }
+  .dc-log-row:hover { background:rgba(255,255,255,.02); }
+  .dc-log-row:nth-child(even) { background:rgba(255,255,255,.008); }
+  .dc-log-row:nth-child(even):hover { background:rgba(255,255,255,.025); }
+
+  .dc-log-time { color:var(--text-muted); min-width:110px; flex-shrink:0; }
+  .dc-log-level {
+    width:18px; height:18px; border-radius:4px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; font-weight:700; color:#fff;
+  }
+  .dc-log-level.d { background:var(--blue); }
+  .dc-log-level.w { background:var(--yellow); }
+  .dc-log-level.e { background:var(--red); }
+  .dc-log-level.i { background:var(--green); }
+  .dc-log-tag { font-weight:600; min-width:80px; flex-shrink:0; }
+  .dc-log-msg { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .dc-log-row.lv-d .dc-log-tag, .dc-log-row.lv-d .dc-log-msg { color:var(--blue); }
+  .dc-log-row.lv-i .dc-log-tag, .dc-log-row.lv-i .dc-log-msg { color:var(--green); }
+  .dc-log-row.lv-w .dc-log-tag, .dc-log-row.lv-w .dc-log-msg { color:var(--yellow); }
+  .dc-log-row.lv-e .dc-log-tag, .dc-log-row.lv-e .dc-log-msg { color:var(--red); }
+
+  .dc-log-status {
+    display:flex; align-items:center; gap:10px;
+    padding:8px 20px; border-top:1px solid var(--border);
+    font-size:11px; color:var(--text-muted); flex-shrink:0;
+  }
+  .dc-log-status .live { display:flex; align-items:center; gap:5px; color:var(--green); }
+  .dc-log-status .live-dot2 { width:6px; height:6px; border-radius:50%; background:var(--green); animation:dcBlink 1.2s infinite; }
+
+  /* ═══════════ QC Tab ═══════════ */
+  .dc-qc-wrap { display:flex; flex-direction:column; flex:1; overflow:hidden; }
+  .dc-qc-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 20px; border-bottom:1px solid var(--border); flex-shrink:0;
+  }
+  .dc-qc-title { font-size:14px; font-weight:600; }
+  .dc-qc-stats { display:flex; gap:14px; }
+  .dc-qc-stat {
+    display:flex; align-items:center; gap:5px;
+    font-size:12px; color:var(--text-secondary);
+  }
+  .dc-qc-stat .dot { width:8px; height:8px; border-radius:50%; }
+
+  .dc-qc-table-wrap { flex:1; overflow:auto; scrollbar-width:thin; }
+  .dc-qc-table { width:100%; border-collapse:collapse; font-size:13px; min-width:600px; }
+  .dc-qc-table thead th {
+    position:sticky; top:0; background:var(--bg-input);
+    padding:14px 20px; text-align:left;
+    font-size:12px; font-weight:600; color:var(--text-muted);
+    text-transform:uppercase; letter-spacing:.4px;
+    border-bottom:1px solid var(--border); white-space:nowrap;
+  }
+  .dc-qc-table tbody tr {
+    border-bottom:1px solid var(--border-light);
+    transition:background .1s; cursor:pointer;
+  }
+  .dc-qc-table tbody tr:hover { background:var(--bg-card-hover); }
+  .dc-qc-table tbody td { padding:14px 20px; vertical-align:middle; }
+  .dc-qc-time { font-family:var(--font-mono); color:var(--text-primary); font-size:13px; font-weight:500; }
+  .dc-qc-pkg { font-family:var(--font-mono); color:var(--text-secondary); font-size:12px; }
+  .dc-qc-badge {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:5px 14px; border-radius:var(--radius-sm);
+    font-size:12px; font-weight:600; white-space:nowrap;
+  }
+  .dc-qc-badge.checking { background:var(--yellow-bg); color:var(--yellow); border:1px solid rgba(255,179,0,.15); }
+  .dc-qc-badge.ok { background:var(--green-bg); color:var(--green); border:1px solid rgba(0,200,83,.12); }
+  .dc-qc-badge.issue { background:var(--red-bg); color:var(--red); border:1px solid rgba(255,82,82,.12); }
+  .dc-qc-badge .qc-dot { width:6px; height:6px; border-radius:50%; background:currentColor; }
+
+  /* ═══════════ History Tab ═══════════ */
+  .dc-hist-wrap { display:flex; flex-direction:column; flex:1; overflow:hidden; }
+  .dc-hist-toolbar {
+    display:flex; gap:10px; padding:12px 20px;
+    border-bottom:1px solid var(--border); flex-shrink:0;
+  }
+  .dc-hist-btn {
+    padding:7px 18px; border-radius:var(--radius-sm);
+    border:1px solid var(--border); background:var(--bg-card);
+    color:var(--text-secondary); font-size:13px; font-weight:500;
+    cursor:pointer; transition:all .12s;
+  }
+  .dc-hist-btn:hover { background:var(--bg-card-hover); }
+  .dc-hist-btn:active { transform:scale(.96); }
+  .dc-hist-btn.refresh-btn { background:var(--blue); color:#fff; border-color:var(--blue); }
+  .dc-hist-btn.refresh-btn:hover { opacity:.88; }
+  .dc-hist-btn.warn-btn { color:var(--text-secondary); }
+  .dc-hist-btn.warn-btn:hover { background:var(--bg-card-hover); }
+  .dc-hist-btn.danger-btn { color:var(--text-secondary); }
+  .dc-hist-btn.danger-btn:hover { background:var(--bg-card-hover); }
+
+  .dc-hist-list {
+    flex:1; overflow-y:auto;
+    scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.04) transparent;
+  }
+  .dc-hist-thead {
+    display:flex; padding:12px 20px;
+    background:var(--bg-input);
+    border-bottom:1px solid var(--border);
+    font-size:12px; font-weight:600; color:var(--text-muted);
+    text-transform:uppercase; letter-spacing:.4px;
+    position:sticky; top:0; z-index:1;
+  }
+  .dc-hist-thead .th-name { flex:1; }
+  .dc-hist-thead .th-action { width:80px; text-align:center; }
+  .dc-hist-row {
+    display:flex; align-items:center; padding:14px 20px;
+    border-bottom:1px solid var(--border-light); transition:background .08s;
+  }
+  .dc-hist-row:hover { background:var(--bg-card-hover); }
+  .dc-hist-name {
+    flex:1; font-family:var(--font-mono); font-size:13px;
+    color:var(--text-primary); line-height:1.5; font-weight:500;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dc-hist-del {
+    padding:6px 20px; border-radius:var(--radius-sm);
+    border:1px solid var(--border); background:var(--bg-input);
+    color:var(--text-secondary); font-size:12px; font-weight:600;
+    cursor:pointer; transition:all .12s; flex-shrink:0; margin-left:12px;
+  }
+  .dc-hist-del:hover { border-color:var(--red); color:var(--red); background:var(--red-bg); }
+  .dc-hist-del:active { transform:scale(.96); }
+
+  .dc-hist-count {
+    padding:8px 20px; border-top:1px solid var(--border);
+    font-size:11px; color:var(--text-muted); flex-shrink:0;
+  }
+
+  /* Unmount confirm modal */
+  .dc-unmount-overlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,.7); z-index:500;
+    justify-content:center; align-items:center;
+    backdrop-filter:blur(6px);
+  }
+  .dc-unmount-overlay.active { display:flex; }
+  .dc-unmount-dialog {
+    width:420px; max-width:90vw; background:var(--bg-card);
+    border:1px solid rgba(255,255,255,.08); border-radius:var(--radius-lg);
+    padding:28px; text-align:center;
+    animation:mainIn .25s cubic-bezier(.16,1,.3,1);
+    box-shadow:0 24px 80px rgba(0,0,0,.5);
+  }
+  .dc-unmount-dialog .um-desc {
+    font-size:14px; color:var(--text-secondary); line-height:1.7; margin-bottom:16px;
+  }
+  .dc-unmount-dialog .um-title {
+    font-size:16px; font-weight:700; color:var(--text-primary); margin-bottom:24px;
+  }
+  .dc-unmount-dialog .um-btns { display:flex; gap:12px; }
+  .dc-unmount-dialog .um-btn {
+    flex:1; padding:12px; border-radius:var(--radius-sm); border:none;
+    font-size:14px; font-weight:600; cursor:pointer; transition:all .12s;
+  }
+  .dc-unmount-dialog .um-btn:active { transform:scale(.97); }
+  .dc-unmount-dialog .um-btn.primary { background:var(--blue); color:#fff; }
+  .dc-unmount-dialog .um-btn.secondary { background:rgba(255,255,255,.06); color:var(--text-secondary); }
+
+  /* ═══════════ PKG CHECK + PKG LIST MODALS ═══════════ */
+  .pkg-check-overlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,.78); z-index:300;
+    justify-content:center; align-items:center;
+    backdrop-filter:blur(6px);
+  }
+  .pkg-check-overlay.active { display:flex; }
+
+  .pkg-check-modal {
+    width:500px; max-width:92vw; max-height:85vh;
+    background:#1A1B20; border-radius:18px;
+    border:1px solid rgba(255,255,255,.07);
+    box-shadow:0 28px 100px rgba(0,0,0,.7);
+    animation:mainIn .3s cubic-bezier(.16,1,.3,1);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .pkg-check-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 28px; height:64px; flex-shrink:0;
+    border-bottom:1px solid var(--border); background:var(--bg-card);
+  }
+  .pkg-check-header h3 { font-size:20px; font-weight:700; letter-spacing:.5px; }
+  .pkg-check-close {
+    width:36px; height:36px; border-radius:50%;
+    background:rgba(255,255,255,.06); border:none;
+    color:var(--text-secondary); font-size:20px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; transition:all .15s;
+  }
+  .pkg-check-close:hover { background:var(--red); color:#fff; }
+
+  .pkg-check-body { padding:20px; flex:1; overflow-y:auto; }
+
+  .pkg-check-status { font-size:14px; font-weight:600; margin-bottom:10px; }
+  .pkg-progress-bar {
+    height:4px; border-radius:2px; background:rgba(255,255,255,.06);
+    margin-bottom:20px; overflow:hidden;
+  }
+  .pkg-progress-fill { height:100%; border-radius:2px; transition:width .6s ease; }
+  .pkg-progress-fill.loading { background:var(--blue); animation:pkgPulse 1.5s ease-in-out infinite; }
+  .pkg-progress-fill.success { background:var(--green); width:100%!important; }
+  .pkg-progress-fill.error { background:var(--red); width:100%!important; }
+  @keyframes pkgPulse { 0%,100%{opacity:.6}50%{opacity:1} }
+
+  .pkg-check-section { margin-bottom:14px; }
+  .pkg-check-section-title {
+    font-size:12px; color:var(--text-muted); font-weight:500;
+    margin-bottom:8px;
+  }
+  .pkg-check-item {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 14px; background:var(--bg-input);
+    border:1px solid var(--border); border-radius:var(--radius-sm);
+    margin-bottom:6px; font-size:13px;
+  }
+  .pkg-check-item .ci-icon { width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .pkg-check-item .ci-icon.ok { background:var(--green); }
+  .pkg-check-item .ci-icon.loading { background:var(--blue); animation:pkgPulse 1s infinite; }
+  .pkg-check-item .ci-icon.err { background:var(--red); }
+  .pkg-check-item .ci-icon svg { width:12px; height:12px; fill:#fff; }
+  .pkg-check-item .ci-name { flex:1; color:var(--text-primary); }
+  .pkg-check-item .ci-status { font-size:12px; font-weight:600; padding:3px 10px; border-radius:var(--radius-sm); }
+  .pkg-check-item .ci-status.checking { color:var(--blue); background:var(--blue-bg); }
+  .pkg-check-item .ci-status.ok { color:var(--green); background:var(--green-bg); }
+  .pkg-check-item .ci-status.err { color:var(--red); background:var(--red-bg); }
+
+  .pkg-info-section { margin-top:16px; }
+  .pkg-info-section-title {
+    font-size:12px; color:var(--text-muted); font-weight:500;
+    margin-bottom:8px; padding-left:4px;
+    border-left:3px solid var(--blue); padding-left:10px;
+  }
+  .pkg-info-item {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 14px; background:var(--bg-input);
+    border:1px solid var(--border); border-radius:var(--radius-sm);
+    margin-bottom:4px; font-size:13px;
+  }
+  .pkg-info-item .pi-icon { color:var(--text-muted); flex-shrink:0; }
+  .pkg-info-item .pi-icon svg { width:16px; height:16px; fill:currentColor; }
+  .pkg-info-item .pi-label { color:var(--text-muted); min-width:60px; }
+  .pkg-info-item .pi-val { color:var(--text-primary); font-family:var(--font-mono); font-size:12px; }
+
+  .pkg-fail-reason {
+    padding:12px 16px; background:rgba(255,82,82,.05);
+    border:1px solid rgba(255,82,82,.12); border-radius:var(--radius-sm);
+    color:var(--red); font-size:13px; margin-bottom:16px;
+  }
+
+  .pkg-check-footer { padding:16px 20px; border-top:1px solid var(--border); text-align:center; }
+  .pkg-retry-btn {
+    padding:10px 40px; border-radius:var(--radius-sm); border:none;
+    background:var(--blue); color:#fff; font-size:14px; font-weight:600;
+    cursor:pointer; transition:all .12s;
+  }
+  .pkg-retry-btn:active { transform:scale(.97); }
+
+  /* Package list modal */
+  .pkg-list-overlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,.78); z-index:300;
+    justify-content:center; align-items:center;
+    backdrop-filter:blur(6px);
+  }
+  .pkg-list-overlay.active { display:flex; }
+  .pkg-list-modal {
+    width:900px; max-width:95vw; height:720px; max-height:90vh;
+    background:#1A1B20; border-radius:18px;
+    border:1px solid rgba(255,255,255,.07);
+    box-shadow:0 28px 100px rgba(0,0,0,.7);
+    animation:mainIn .3s cubic-bezier(.16,1,.3,1);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .pkg-list-header {
+    display:flex; align-items:center;
+    padding:0 28px; height:64px; flex-shrink:0;
+    border-bottom:1px solid var(--border); background:var(--bg-card);
+  }
+  .pkg-list-tabs { display:flex; gap:4px; margin:0 auto; }
+  .pkg-list-tab {
+    padding:10px 22px; font-size:15px; font-weight:500;
+    color:var(--text-secondary); cursor:pointer; position:relative;
+    transition:color .12s;
+  }
+  .pkg-list-tab:hover { color:var(--text-primary); }
+  .pkg-list-tab.active { color:var(--text-primary); font-weight:600; }
+  .pkg-list-tab.active::after {
+    content:''; position:absolute; bottom:0; left:22px; right:22px;
+    height:2.5px; border-radius:2px; background:var(--blue);
+  }
+  .pkg-list-close {
+    width:36px; height:36px; border-radius:50%;
+    background:rgba(255,255,255,.06); border:none;
+    color:var(--text-secondary); font-size:20px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; transition:all .15s;
+  }
+  .pkg-list-close:hover { background:var(--red); color:#fff; }
+
+  .pkg-list-toolbar {
+    display:flex; align-items:center; gap:10px;
+    padding:14px 28px; border-bottom:1px solid var(--border); flex-shrink:0;
+    flex-wrap:wrap;
+  }
+  .pkg-search {
+    display:flex; align-items:center; gap:6px;
+    background:var(--bg-input); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:0 12px; flex:1; max-width:200px;
+  }
+  .pkg-search svg { width:14px; height:14px; fill:var(--text-muted); }
+  .pkg-search input { flex:1; background:none; border:none; color:var(--text-primary); font-size:13px; padding:8px 0; outline:none; }
+  .pkg-search input::placeholder { color:var(--text-muted); }
+
+  .pkg-toolbar-btn {
+    padding:7px 16px; border-radius:var(--radius-sm);
+    border:1px solid var(--border); background:var(--bg-card);
+    color:var(--text-secondary); font-size:12px; font-weight:500;
+    cursor:pointer; transition:all .12s;
+  }
+  .pkg-toolbar-btn:hover { background:var(--bg-card-hover); }
+  .pkg-toolbar-btn.refresh { background:var(--blue); color:#fff; border-color:var(--blue); }
+
+  .pkg-items { flex:1; overflow-y:auto; padding:12px 28px; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.06) transparent; }
+  .pkg-item {
+    display:flex; align-items:center; gap:14px;
+    padding:14px 16px; margin-bottom:6px;
+    background:#161B22; border:1px solid var(--border);
+    border-radius:var(--radius); transition:all .12s;
+  }
+  .pkg-item:hover { border-color:rgba(255,255,255,.1); }
+  .pkg-item-icon {
+    width:40px; height:40px; border-radius:var(--radius-sm);
+    background:rgba(255,179,0,.1); display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .pkg-item-icon svg { width:22px; height:22px; fill:var(--yellow); }
+  .pkg-item-info { flex:1; min-width:0; }
+  .pkg-item-name { font-size:13px; font-weight:600; color:var(--text-primary); margin-bottom:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pkg-item-name .ptag { display:inline-block; margin-left:8px; font-size:11px; font-weight:500; color:var(--blue); background:var(--blue-bg); padding:1px 8px; border-radius:4px; }
+  .pkg-item-meta { font-size:11px; color:var(--text-muted); display:flex; gap:12px; }
+  .pkg-item-btns { display:flex; gap:6px; flex-shrink:0; }
+  .pkg-dl-btn {
+    padding:6px 16px; border-radius:var(--radius-sm); font-size:12px; font-weight:600;
+    cursor:pointer; transition:all .12s; display:flex; align-items:center; gap:4px;
+    border:1px solid var(--border); background:var(--bg-input); color:var(--text-secondary);
+  }
+  .pkg-dl-btn:hover { color:var(--text-primary); background:var(--bg-card-hover); }
+  .pkg-dl-btn.install { background:var(--blue); color:#fff; border-color:var(--blue); }
+  .pkg-dl-btn.install:hover { opacity:.88; }
+  .pkg-dl-btn svg { width:14px; height:14px; fill:currentColor; }
+
+  .pkg-list-footer {
+    display:flex; align-items:center; gap:16px;
+    padding:12px 28px; border-top:1px solid var(--border);
+    font-size:12px; color:var(--text-muted); flex-shrink:0;
+  }
+
+  /* ═══════════ Doc Modal (功能说明文档) ═══════════ */
+  .doc-overlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,.72); z-index:500;
+    justify-content:center; align-items:center;
+    backdrop-filter:blur(6px);
+  }
+  .doc-overlay.active { display:flex; }
+  .doc-modal {
+    width:680px; max-width:92vw; height:720px; max-height:90vh;
+    background:#1A1B20; border-radius:var(--radius-lg); overflow:hidden;
+    display:flex; flex-direction:column;
+    border:1px solid rgba(255,255,255,.08);
+    box-shadow:0 24px 80px rgba(0,0,0,.5);
+    box-shadow:0 24px 80px rgba(0,0,0,.6);
+    animation:modalIn .25s cubic-bezier(.16,1,.3,1);
+  }
+  .doc-modal-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 24px; flex-shrink:0; border-bottom:1px solid var(--border);
+  }
+  .doc-modal-title { font-size:20px; font-weight:700; color:var(--text-primary); }
+  .doc-modal-close {
+    width:32px; height:32px; border-radius:50%;
+    background:var(--green); border:none; color:#fff;
+    font-size:18px; cursor:pointer; display:flex;
+    align-items:center; justify-content:center; transition:all .15s;
+    font-weight:700; line-height:1;
+  }
+  .doc-modal-close:hover { opacity:.85; transform:scale(1.05); }
+  .doc-modal-body {
+    flex:1; overflow-y:auto; padding:6px 24px 12px;
+    color:var(--text-secondary); font-size:14px; line-height:1.8;
+  }
+  .doc-modal-body::-webkit-scrollbar { width:4px; }
+  .doc-modal-body::-webkit-scrollbar-thumb { background:rgba(255,255,255,.12); border-radius:2px; }
+  .doc-modal-body h3 {
+    font-size:15px; font-weight:700; color:var(--text-primary);
+    margin:20px 0 10px; display:flex; align-items:center; gap:10px;
+  }
+  .doc-modal-body h3::before {
+    content:''; width:4px; height:16px; border-radius:2px;
+    background:var(--blue); display:inline-block;
+  }
+  .doc-modal-body h3:first-child { margin-top:12px; }
+  .doc-modal-body .doc-item {
+    margin-bottom:10px; padding:2px 0;
+    background:transparent; border:none;
+  }
+  .doc-modal-body .doc-item-title {
+    font-weight:600; font-size:14px; color:var(--text-primary);
+    display:flex; align-items:center; gap:8px;
+  }
+  .doc-modal-body .doc-item-title::before {
+    content:''; width:6px; height:6px; border-radius:50%;
+    background:var(--blue); display:inline-block; flex-shrink:0;
+  }
+  .doc-modal-body .doc-item-desc {
+    color:var(--text-muted); margin-top:4px; padding-left:14px; font-size:13px;
+  }
+  .doc-modal-footer {
+    padding:14px 24px 20px; flex-shrink:0; border-top:1px solid rgba(255,255,255,.06);
+  }
+  .doc-modal-footer .doc-ok-btn {
+    width:100%; padding:12px 0; border-radius:var(--radius-sm);
+    background:var(--blue); color:#fff; border:none;
+    font-size:14px; font-weight:600; cursor:pointer;
+    transition:all .15s;
+  }
+  .doc-modal-footer .doc-ok-btn:hover { opacity:.88; }
+  .pkg-list-footer span.clickable {
+    cursor:pointer; transition:color .15s;
+  }
+  .pkg-list-footer span.clickable:hover { color:var(--text-secondary); }
+
+  /* PKG Download Dialog */
+  .pkg-dl-overlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,.7); z-index:400;
+    justify-content:center; align-items:center;
+    backdrop-filter:blur(6px);
+  }
+  .pkg-dl-overlay.active { display:flex; }
+  .pkg-dl-dialog {
+    width:540px; max-width:92vw; background:#1A1B20;
+    border-radius:18px; border:1px solid rgba(255,255,255,.07);
+    box-shadow:0 28px 100px rgba(0,0,0,.7);
+    animation:mainIn .3s cubic-bezier(.16,1,.3,1);
+    padding:28px;
+  }
+  .pkg-dl-title {
+    text-align:center; font-size:20px; font-weight:700;
+    margin-bottom:20px;
+    background:linear-gradient(135deg,#ff6b6b,#a855f7,#4a90ff);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    background-clip:text;
+  }
+  .pkg-dl-warning {
+    padding:14px 18px; border-radius:var(--radius);
+    background:rgba(255,82,82,.06); border:1px solid rgba(255,82,82,.12);
+    font-size:13px; color:var(--red); line-height:1.7; margin-bottom:20px;
+    display:flex; align-items:flex-start; gap:10px;
+  }
+  .pkg-dl-warning .warn-dot {
+    width:18px; height:18px; border-radius:50%; background:var(--red);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px;
+  }
+  .pkg-dl-warning .warn-dot::after { content:'!'; color:#fff; font-size:11px; font-weight:700; }
+  .pkg-dl-status { font-size:18px; font-weight:700; color:var(--text-primary); margin-bottom:16px; }
+  .pkg-dl-progress-wrap { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+  .pkg-dl-bar { flex:1; height:6px; border-radius:3px; background:rgba(255,255,255,.06); overflow:hidden; }
+  .pkg-dl-bar-fill { height:100%; border-radius:3px; background:var(--yellow); width:0; transition:width .5s ease; }
+  .pkg-dl-percent { font-size:18px; font-weight:700; font-family:var(--font-mono); color:var(--text-primary); min-width:40px; text-align:right; }
+  .pkg-dl-check {
+    display:flex; align-items:center; gap:8px;
+    font-size:13px; color:var(--text-secondary); margin-bottom:20px; cursor:pointer;
+  }
+  .pkg-dl-check .chk-box {
+    width:18px; height:18px; border-radius:4px;
+    border:2px solid rgba(255,255,255,.15);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .pkg-dl-check.checked .chk-box { background:var(--blue); border-color:var(--blue); }
+  .pkg-dl-check .chk-box svg { width:11px; height:11px; fill:#fff; opacity:0; }
+  .pkg-dl-check.checked .chk-box svg { opacity:1; }
+  .pkg-dl-info { font-size:12px; color:var(--text-muted); font-family:var(--font-mono); line-height:1.8; }
+
+  .dc-video-bottom {
+    position:absolute; bottom:0; left:0; right:0;
+    display:flex; align-items:center; gap:16px;
+    padding:10px 16px;
+    background:linear-gradient(transparent, rgba(0,0,0,.7));
+    font-size:12px; color:rgba(255,255,255,.7);
+    font-family:var(--font-mono);
+    pointer-events:none;
+  }
+  .dc-video-bottom .speed { font-size:16px; font-weight:700; color:#fff; }
+  .dc-video-bottom .speed-unit { font-size:12px; color:rgba(255,255,255,.5); }
+  .dc-video-bottom .gear-badge {
+    width:22px; height:22px; border-radius:4px;
+    border:1.5px solid rgba(255,255,255,.4);
+    display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:700; color:#fff;
+  }
+
+  /* ── Verify Result Modal ── */
+  #verify-modal .verify-modal {
+    max-width: 460px; background: var(--bg-card); border: 1px solid rgba(255,255,255,0.08);
+  }
+  .verify-body {
+    padding: 24px 28px; display: flex; flex-direction: column; gap: 16px;
+  }
+  .verify-option {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 20px; background: var(--bg-input);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    font-size: 15px; color: var(--text-primary); cursor: pointer;
+    transition: all 0.18s; font-weight: 500; user-select: none;
+  }
+  .verify-option:hover { border-color: rgba(255,255,255,0.15); background: var(--bg-card-hover); }
+  .verify-option input[type="radio"] { display: none; }
+  .verify-radio {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.2); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .verify-radio::after {
+    content: ''; width: 10px; height: 10px; border-radius: 50%;
+    background: transparent; transition: all 0.2s;
+  }
+  .verify-option.selected {
+    border-color: var(--blue); background: var(--blue-bg);
+  }
+  .verify-option.selected .verify-radio {
+    border-color: var(--blue);
+  }
+  .verify-option.selected .verify-radio::after {
+    background: var(--blue);
+  }
+
+  /* ═══════════ Comfort Modal (舒适性指标) ═══════════ */
+  .cmf-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:600;justify-content:center;align-items:center;backdrop-filter:blur(6px)}
+  .cmf-overlay.active{display:flex}
+  .cmf-modal{width:420px;max-width:92vw;height:920px;max-height:92vh;background:#1A1B20;border-radius:18px;display:flex;flex-direction:column;border:1px solid rgba(255,255,255,.07);box-shadow:0 28px 100px rgba(0,0,0,.7);animation:mainIn .3s cubic-bezier(.16,1,.3,1);overflow:hidden}
+  .cmf-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;flex-shrink:0}
+  .cmf-header-left{display:flex;align-items:center;gap:6px}
+  .cmf-header-title{font-size:15px;font-weight:600;color:var(--text-primary)}
+  .cmf-header-title .cmf-pct{font-size:26px;font-weight:800}
+  .cmf-header-close{width:32px;height:32px;border-radius:var(--radius-sm);background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text-secondary);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;line-height:1}
+  .cmf-header-close:hover{background:var(--red);color:#fff;border-color:var(--red)}
+  .cmf-body{flex-grow:1;height:0;overflow-y:auto;overflow-x:hidden;padding:0 16px 20px}
+  .cmf-body::-webkit-scrollbar{width:3px}
+  .cmf-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+  .cmf-coffee{text-align:center;padding:4px 0 12px}
+  .cmf-coffee svg{width:150px;height:140px}
+  .cmf-steam{animation:cmfSteam 2s ease-in-out infinite;opacity:.6}
+  .cmf-steam:nth-child(2){animation-delay:.4s}
+  .cmf-steam:nth-child(3){animation-delay:.8s}
+  @keyframes cmfSteam{0%,100%{transform:translateY(0);opacity:0}50%{transform:translateY(-8px);opacity:.6}}
+  .cmf-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px;overflow:hidden}
+  .cmf-card.cmf-card-stats{margin-top:16px;margin-bottom:16px;padding:4px 14px}
+  .cmf-card.cmf-card-stats .cmf-stat{padding:8px 4px}
+  .cmf-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .cmf-card-title{font-size:13px;font-weight:600;color:var(--text-primary)}
+  .cmf-card-value{font-size:13px;font-weight:700;color:var(--text-primary)}
+  .cmf-card-value .cmf-unit{font-size:10px;font-weight:500;color:var(--text-muted)}
+  .cmf-bar{height:8px;border-radius:4px;display:flex;overflow:hidden;gap:2px}
+  .cmf-bar-seg{height:100%;border-radius:4px}
+  .cmf-bar-seg.s-good{background:var(--green)}
+  .cmf-bar-seg.s-warn{background:var(--yellow)}
+  .cmf-bar-seg.s-mild{background:var(--orange)}
+  .cmf-bar-seg.s-bad{background:var(--red)}
+  .cmf-legend{display:flex;gap:12px;margin-top:8px;flex-wrap:wrap}
+  .cmf-legend-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-secondary)}
+  .cmf-legend-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .cmf-legend-dot.good{background:var(--green)}
+  .cmf-legend-dot.warn{background:var(--yellow)}
+  .cmf-legend-dot.mild{background:var(--orange)}
+  .cmf-legend-dot.bad{background:var(--red)}
+  .cmf-chart-wrap{position:relative;height:70px;overflow:hidden}
+  .cmf-chart-wrap canvas{position:absolute;top:0;left:0;width:100%;height:100%}
+  .cmf-stats{display:flex}
+  .cmf-stat{flex:1;min-width:0;text-align:center;padding:12px 4px;position:relative}
+  .cmf-stat:last-child::after{display:none}
+  .cmf-stat::after{content:'';position:absolute;right:0;top:30%;height:40%;width:1px;background:var(--border)}
+  .cmf-stat-label{font-size:10px;color:var(--text-muted);margin-bottom:3px}
+  .cmf-stat-val{font-size:20px;font-weight:800;color:var(--text-primary)}
+  .cmf-stat-val .cmf-stat-unit{font-size:11px;font-weight:500;color:var(--text-muted)}
+  .cmf-events-section{padding:14px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius)}
+  .cmf-events-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:0 2px}
+  .cmf-events-title{font-size:13px;font-weight:600;color:var(--text-primary)}
+  .cmf-events-count{font-size:11px;color:var(--text-muted)}
+  .cmf-event-row{display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid rgba(255,255,255,.04)}
+  .cmf-event-row:last-child{border-bottom:none}
+  .cmf-event-time{font-size:12px;color:var(--text-muted);font-family:var(--font-mono);flex-shrink:0;width:60px}
+  .cmf-event-bar{width:3px;height:32px;border-radius:2px;flex-shrink:0}
+  .cmf-event-bar.lv-bad{background:var(--red)}
+  .cmf-event-bar.lv-good{background:var(--green)}
+  .cmf-event-bar.lv-mild{background:var(--orange)}
+  .cmf-event-info{flex:1;min-width:0}
+  .cmf-event-level{font-size:13px;font-weight:700}
+  .cmf-event-level.lv-bad{color:var(--red)}
+  .cmf-event-level.lv-good{color:var(--green)}
+  .cmf-event-level.lv-mild{color:var(--orange)}
+  .cmf-event-desc{font-size:11px;color:var(--text-muted);margin-top:1px}
+  .cmf-event-score{width:34px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;background:var(--bg-input);border:1px solid var(--border);color:var(--text-secondary)}
+  .cmf-more{text-align:center;padding:8px 0 2px;font-size:11px;color:var(--text-muted);cursor:pointer}
+  .cmf-more:hover{color:var(--text-secondary)}
+</style>
+</head>
+<body>
+
+<div class="tablet-bg">
+  <div class="tablet-frame">
+    <div class="container">
+  <button class="close-btn" title="关闭">&times;</button>
+
+  <!-- ═══════════车辆状态═══════════-->
+  <div class="section">
+    <div class="section-title">车辆状态</div>
+
+    <div class="status-chips">
+      <div class="status-chip neutral">
+        <span class="chip-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/><polyline points="12 12 12 16"/><line x1="14" y1="15" x2="12" y2="16"/></svg>
+        </span>车端
+      </div>
+      <div class="status-chip ok">
+        <span class="chip-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1"/><line x1="6" y1="5" x2="6" y2="2"/><line x1="12" y1="5" x2="12" y2="2"/><line x1="18" y1="5" x2="18" y2="2"/><line x1="6" y1="19" x2="6" y2="22"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="18" y1="19" x2="18" y2="22"/></svg>
+        </span>A板      </div>
+      <div class="status-chip err">
+        <span class="chip-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1"/><line x1="6" y1="5" x2="6" y2="2"/><line x1="12" y1="5" x2="12" y2="2"/><line x1="18" y1="5" x2="18" y2="2"/><line x1="6" y1="19" x2="6" y2="22"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="18" y1="19" x2="18" y2="22"/></svg>
+        </span>B板      </div>
+      <div class="status-chip ok">
+        <span class="chip-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="12" rx="3"/><circle cx="8" cy="14" r="1.5"/><circle cx="16" cy="14" r="1.5"/><path d="M12 6V2"/><path d="M8 2h8"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="9" y1="22" x2="15" y2="22"/></svg>
+        </span>Agent A
+      </div>
+      <div class="status-chip neutral">
+        <span class="chip-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="12" rx="3"/><circle cx="8" cy="14" r="1.5"/><circle cx="16" cy="14" r="1.5"/><path d="M12 6V2"/><path d="M8 2h8"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="9" y1="22" x2="15" y2="22"/></svg>
+        </span>Agent B
+      </div>
+    </div>
+
+    <div class="info-cards">
+      <div class="info-card">
+        <div class="info-icon cpu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+        </div>
+        <div class="info-text"><div class="info-label">ADCU</div><div class="info-value pending">获取中...</div></div>
+      </div>
+      <div class="info-card">
+        <div class="info-icon gear">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </div>
+        <div class="info-text"><div class="info-label">APP</div><div class="info-value">2.3.0_372_B7_128922992_2929922</div></div>
+      </div>
+      <div class="info-card">
+        <div class="info-icon car">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="8" width="20" height="10" rx="2"/><circle cx="7" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/><line x1="7" y1="8" x2="7" y2="5"/><line x1="17" y1="8" x2="17" y2="5"/></svg>
+        </div>
+        <div class="info-text"><div class="info-label">VIN</div><div class="info-value">L28299AJSNDJUUJ892920</div></div>
+      </div>
+      <div class="info-card">
+        <div class="info-icon server">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+        </div>
+        <div class="info-text">
+          <div class="info-label">HMI Server</div>
+          <div class="info-input-row"><input type="text" value="2123213333"><button class="btn-sm">确认</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════开关选项 ═══════════-->
+  <div class="section">
+    <div class="section-title">开关选项</div>
+    <div class="toggle-grid">
+      <div class="toggle-item">
+        <div class="toggle-left"><div class="toggle-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div><span class="toggle-label">APA录制功能</span></div>
+        <label class="switch t-purple"><input type="checkbox"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-item">
+        <div class="toggle-left"><div class="toggle-icon target"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div><span class="toggle-label">AVP录制功能</span></div>
+        <label class="switch t-yellow"><input type="checkbox"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-item">
+        <div class="toggle-left"><div class="toggle-icon upload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></div><span class="toggle-label">上传进度弹窗</span></div>
+        <label class="switch t-blue"><input type="checkbox"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-item">
+        <div class="toggle-left"><div class="toggle-icon nopic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div><span class="toggle-label">无图采集</span></div>
+        <label class="switch t-red"><input type="checkbox" checked><span class="slider"></span></label>
+      </div>
+      <div class="toggle-item">
+        <div class="toggle-left"><div class="toggle-icon level"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><span class="toggle-label">事件等级</span></div>
+        <label class="switch t-green"><input type="checkbox" checked><span class="slider"></span></label>
+      </div>
+      <div class="toggle-item">
+        <div class="toggle-left"><div class="toggle-icon question"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><span class="toggle-label">问题分类</span></div>
+        <label class="switch t-orange"><input type="checkbox"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-item full">
+        <div class="toggle-left"><div class="toggle-icon cloud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/><line x1="3" y1="3" x2="21" y2="21"/></svg></div><span class="toggle-label">关闭SNC日志上传</span></div>
+        <label class="switch t-cyan"><input type="checkbox"><span class="slider"></span></label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════功能测试 ═══════════-->
+  <div class="section">
+    <div class="section-title">功能测试</div>
+    <div class="func-grid">
+      <div class="func-card" style="grid-column:1;border-color:rgba(255,179,0,0.25);" onclick="openDataCollectModal()">
+        <div class="func-icon f7"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+        <span class="func-name">数据采集</span>
+      </div>
+      <div class="func-card" style="border-color:rgba(255,128,171,0.25);" onclick="openComfortModal()">
+        <div class="func-icon f6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg></div>
+        <span class="func-name">车端舒适性工具</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════高级调试 ═══════════-->
+  <div class="section">
+    <div class="section-title">高级调试</div>
+    <div class="debug-list">
+      <div class="debug-item">
+        <div class="debug-left"><div class="debug-icon d1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><span class="debug-label">解锁SSH</span></div>
+        <span class="debug-arrow">&rsaquo;</span>
+      </div>
+      <div class="debug-item">
+        <div class="debug-left"><div class="debug-icon d2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div><span class="debug-label">调试面板</span></div>
+        <span class="debug-arrow">&rsaquo;</span>
+      </div>
+      <div class="debug-item">
+        <div class="debug-left"><div class="debug-icon d3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="6" height="6"/><rect x="16" y="2" width="6" height="6"/><rect x="9" y="9" width="6" height="6"/><rect x="2" y="16" width="6" height="6"/><rect x="16" y="16" width="6" height="6"/></svg></div><span class="debug-label">Topic面板</span></div>
+        <span class="debug-arrow">&rsaquo;</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════ STATION TEST MAIN MODAL ═══════════ -->
+<div class="main-overlay" id="main-overlay">
+  <div class="main-modal">
+    <div class="main-modal-header">
+      <span class="main-modal-title">站点测试监控</span>
+      <button class="main-modal-close" onclick="closeStationModal()">✕</button>
+    </div>
+    <div class="main-modal-body">
+      <div class="topbar">
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="输入站点名称"><button class="btn-confirm">确认</button>
+        </div>
+        <div class="btn-group">
+          <button class="btn-tag">上控</button><button class="btn-tag">起步</button><button class="btn-tag">回场站</button><button class="btn-tag">出场站</button><button class="btn-tag active">场内站</button>
+        </div>
+        <button class="btn-refresh"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>刷新</button>
+      </div>
+      <div class="summary-bar">
+        <div class="summary-card"><div class="summary-icon2 t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg></div><div class="summary-info"><span class="summary-label">站点总数</span><span class="summary-value">8</span></div></div>
+        <div class="summary-card"><div class="summary-icon2 p"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div><div class="summary-info"><span class="summary-label">通过</span><span class="summary-value" style="color:var(--green)">3</span></div></div>
+        <div class="summary-card"><div class="summary-icon2 f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div><div class="summary-info"><span class="summary-label">失败</span><span class="summary-value" style="color:var(--red)">3</span></div></div>
+        <div class="summary-card"><div class="summary-icon2 w"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="summary-info"><span class="summary-label">待验证 / 不合理</span><span class="summary-value" style="color:var(--yellow)">2</span></div></div>
+      </div>
+      <div class="view-toggle-bar">
+        <div class="view-toggle-group">
+          <button class="view-toggle-btn active2" data-view="cards" onclick="switchView('cards')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>卡片视图</button>
+          <button class="view-toggle-btn" data-view="table" onclick="switchView('table')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg>表格视图</button>
+        </div>
+        <span class="station-count-text">共 8 条记录</span>
+      </div>
+      <div class="view-cards active" id="view-cards"><div class="station-grid" id="station-grid"></div></div>
+      <div class="view-table" id="view-table"><div class="table-wrap"><table class="data-table"><thead><tr><th>序号</th><th>站点名称</th><th>位置</th><th>导航</th><th>停靠成功</th><th>停靠失败</th><th>起步失败</th><th>验证</th><th>测试结果</th></tr></thead><tbody id="table-body"></tbody></table></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SUB MODALS ═══════════ -->
+<div class="modal-overlay" id="sub-dock-success">
+  <div class="modal"><div class="modal-header"><span class="modal-title2">停靠成功</span><button class="modal-close" onclick="closeSub('sub-dock-success')">&times;</button></div>
+    <div class="modal-body">
+      <div class="modal-section"><div class="section-header"><span class="section-icon2 blue"></span><span class="section-title2">站点位置属性</span></div><div class="tag-grid"><span class="tag-chip blue" data-tag="非机动车道">非机动车道</span><span class="tag-chip blue" data-tag="出入口">出入口</span><span class="tag-chip blue" data-tag="混合道路">混合道路</span><span class="tag-chip blue" data-tag="站点位置不合理">站点位置不合理</span><span class="tag-chip blue" data-tag="机动车道">机动车道</span><span class="tag-chip blue" data-tag="豁口与缺口">豁口与缺口</span><span class="tag-chip blue" data-tag="公交站台">公交站台</span><span class="tag-chip blue" data-tag="其他">其他</span></div></div>
+      <div class="modal-section"><div class="section-header"><span class="section-icon2 green"></span><span class="section-title2">站点场景属性</span></div><div class="modal-sub-title">居住生活类</div><div class="tag-grid"><span class="tag-chip green" data-tag="住宅小区">住宅小区</span><span class="tag-chip green" data-tag="城中村">城中村</span><span class="tag-chip green" data-tag="酒店">酒店</span></div><div class="modal-sub-title">商业办公类</div><div class="tag-grid"><span class="tag-chip green" data-tag="写字楼">写字楼</span><span class="tag-chip green" data-tag="商业街">商业街</span><span class="tag-chip green" data-tag="商场">商场</span></div><div class="modal-sub-title">交通枢纽类</div><div class="tag-grid"><span class="tag-chip green" data-tag="地铁站">地铁站</span><span class="tag-chip green" data-tag="火车机场站">火车机场站</span><span class="tag-chip green" data-tag="公交站">公交站</span></div><div class="modal-sub-title">公服医疗类</div><div class="tag-grid"><span class="tag-chip green" data-tag="医院">医院</span><span class="tag-chip green" data-tag="学校">学校</span><span class="tag-chip green" data-tag="政府机构">政府机构</span></div><div class="modal-sub-title">产业园区类</div><div class="tag-grid"><span class="tag-chip green" data-tag="产业园">产业园</span><span class="tag-chip green" data-tag="厂区">厂区</span><span class="tag-chip green" data-tag="园区">园区</span></div><div class="modal-sub-title">休闲开放类</div><div class="tag-grid"><span class="tag-chip green" data-tag="城市公园">城市公园</span><span class="tag-chip green" data-tag="场馆">场馆</span><span class="tag-chip green" data-tag="景区">景区</span></div></div>
+      <div class="modal-section"><div class="section-header"><span class="section-icon2 purple"></span><span class="section-title2">站点类型</span></div><div class="tag-grid"><span class="tag-chip purple" data-tag="标准站点">标准站点</span><span class="tag-chip purple" data-tag="临停站点">临停站点</span><span class="tag-chip purple" data-tag="即停即走">即停即走</span></div></div>
+      <div class="modal-remark"><label>备注</label><textarea placeholder="请输入备注信息..."></textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-reset" onclick="resetTags(this)">重置</button><button class="btn btn-secondary" onclick="closeSub('sub-dock-success')">取消</button><button class="btn btn-primary" onclick="confirmSub('sub-dock-success')">确认</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="sub-dock-fail">
+  <div class="modal"><div class="modal-header"><span class="modal-title2">停靠失败</span><button class="modal-close" onclick="closeSub('sub-dock-fail')">&times;</button></div>
+    <div class="modal-body">
+      <div class="modal-section"><div class="section-header"><span class="section-icon2 red"></span><span class="section-title2">失败原因</span></div><div class="tag-grid"><span class="tag-chip red" data-tag="未停车">未停车</span><span class="tag-chip red" data-tag="停车未挂P档">停车未挂P档</span><span class="tag-chip red" data-tag="未靠边停车">未靠边停车</span><span class="tag-chip red" data-tag="车身姿态异常">车身姿态异常</span><span class="tag-chip red" data-tag="压线停车">压线停车</span><span class="tag-chip red" data-tag="停车危险驾驶">停车危险驾驶</span><span class="tag-chip red" data-tag="占用对向车道">占用对向车道</span><span class="tag-chip red" data-tag="提前停车">提前停车</span><span class="tag-chip red" data-tag="站点前异常向左变道">站点前异常向左变道</span><span class="tag-chip red" data-tag="主辅路切换失败">主辅路切换失败</span><span class="tag-chip red" data-tag="停车后异常起步">停车后异常起步</span><span class="tag-chip red" data-tag="动态干扰未靠边">动态干扰未靠边</span><span class="tag-chip red" data-tag="车机警告">车机警告</span><span class="tag-chip red" data-tag="驶入硬隔离非机动车道">驶入硬隔离非机动车道</span></div></div>
+      <div class="modal-section"><div class="section-header"><span class="section-icon2 blue"></span><span class="section-title2">站点位置属性</span></div><div class="tag-grid"><span class="tag-chip blue" data-tag="非机动车道">非机动车道</span><span class="tag-chip blue" data-tag="出入口">出入口</span><span class="tag-chip blue" data-tag="混合道路">混合道路</span><span class="tag-chip blue" data-tag="站点位置不合理">站点位置不合理</span><span class="tag-chip blue" data-tag="机动车道">机动车道</span><span class="tag-chip blue" data-tag="豁口与缺口">豁口与缺口</span><span class="tag-chip blue" data-tag="公交站台">公交站台</span><span class="tag-chip blue" data-tag="其他">其他</span></div></div>
+      <div class="modal-section"><div class="section-header"><span class="section-icon2 green"></span><span class="section-title2">站点场景属性</span></div><div class="modal-sub-title">居住生活类</div><div class="tag-grid"><span class="tag-chip green" data-tag="住宅小区">住宅小区</span><span class="tag-chip green" data-tag="城中村">城中村</span><span class="tag-chip green" data-tag="酒店">酒店</span></div><div class="modal-sub-title">商业办公类</div><div class="tag-grid"><span class="tag-chip green" data-tag="写字楼">写字楼</span><span class="tag-chip green" data-tag="商业街">商业街</span><span class="tag-chip green" data-tag="商场">商场</span></div><div class="modal-sub-title">交通枢纽类</div><div class="tag-grid"><span class="tag-chip green" data-tag="地铁站">地铁站</span><span class="tag-chip green" data-tag="火车机场站">火车机场站</span><span class="tag-chip green" data-tag="公交站">公交站</span></div><div class="modal-sub-title">公服医疗类</div><div class="tag-grid"><span class="tag-chip green" data-tag="医院">医院</span><span class="tag-chip green" data-tag="学校">学校</span><span class="tag-chip green" data-tag="政府机构">政府机构</span></div><div class="modal-sub-title">产业园区类</div><div class="tag-grid"><span class="tag-chip green" data-tag="产业园">产业园</span><span class="tag-chip green" data-tag="厂区">厂区</span><span class="tag-chip green" data-tag="园区">园区</span></div><div class="modal-sub-title">休闲开放类</div><div class="tag-grid"><span class="tag-chip green" data-tag="城市公园">城市公园</span><span class="tag-chip green" data-tag="场馆">场馆</span><span class="tag-chip green" data-tag="景区">景区</span></div></div>
+      <div class="modal-section"><div class="section-header"><span class="section-icon2 purple"></span><span class="section-title2">站点类型</span></div><div class="tag-grid"><span class="tag-chip purple" data-tag="标准站点">标准站点</span><span class="tag-chip purple" data-tag="临停站点">临停站点</span><span class="tag-chip purple" data-tag="即停即走">即停即走</span></div></div>
+      <div class="modal-remark"><label>备注</label><textarea placeholder="请输入备注信息..."></textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-reset" onclick="resetTags(this)">重置</button><button class="btn btn-secondary" onclick="closeSub('sub-dock-fail')">取消</button><button class="btn btn-primary" onclick="confirmSub('sub-dock-fail')">确认</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="sub-start-fail">
+  <div class="modal"><div class="modal-header"><span class="modal-title2">起步失败</span><button class="modal-close" onclick="closeSub('sub-start-fail')">&times;</button></div>
+    <div class="modal-body">
+      <div class="modal-section"><div class="section-header"><span class="section-icon2 yellow"></span><span class="section-title2">失败原因</span></div><div class="tag-grid"><span class="tag-chip yellow" data-tag="脱困失败">脱困失败</span><span class="tag-chip yellow" data-tag="危险交互">危险交互</span><span class="tag-chip yellow" data-tag="未进入机动车道">未进入机动车道</span><span class="tag-chip yellow" data-tag="Confirm键无反应">Confirm键无反应</span><span class="tag-chip yellow" data-tag="起步后异常停车">起步后异常停车</span><span class="tag-chip yellow" data-tag="切换至D档后不起步">切换至D档后不起步</span></div></div>
+      <div class="modal-section"><div class="section-header"><span class="section-icon2 blue"></span><span class="section-title2">站点位置属性</span></div><div class="tag-grid"><span class="tag-chip blue" data-tag="非机动车道">非机动车道</span><span class="tag-chip blue" data-tag="出入口">出入口</span><span class="tag-chip blue" data-tag="混合道路">混合道路</span><span class="tag-chip blue" data-tag="站点位置不合理">站点位置不合理</span><span class="tag-chip blue" data-tag="机动车道">机动车道</span><span class="tag-chip blue" data-tag="豁口与缺口">豁口与缺口</span><span class="tag-chip blue" data-tag="公交站台">公交站台</span><span class="tag-chip blue" data-tag="其他">其他</span></div></div>
+      <div class="modal-section"><div class="section-header"><span class="section-icon2 green"></span><span class="section-title2">站点场景属性</span></div><div class="modal-sub-title">居住生活类</div><div class="tag-grid"><span class="tag-chip green" data-tag="住宅小区">住宅小区</span><span class="tag-chip green" data-tag="城中村">城中村</span><span class="tag-chip green" data-tag="酒店">酒店</span></div><div class="modal-sub-title">商业办公类</div><div class="tag-grid"><span class="tag-chip green" data-tag="写字楼">写字楼</span><span class="tag-chip green" data-tag="商业街">商业街</span><span class="tag-chip green" data-tag="商场">商场</span></div><div class="modal-sub-title">交通枢纽类</div><div class="tag-grid"><span class="tag-chip green" data-tag="地铁站">地铁站</span><span class="tag-chip green" data-tag="火车机场站">火车机场站</span><span class="tag-chip green" data-tag="公交站">公交站</span></div><div class="modal-sub-title">公服医疗类</div><div class="tag-grid"><span class="tag-chip green" data-tag="医院">医院</span><span class="tag-chip green" data-tag="学校">学校</span><span class="tag-chip green" data-tag="政府机构">政府机构</span></div><div class="modal-sub-title">产业园区类</div><div class="tag-grid"><span class="tag-chip green" data-tag="产业园">产业园</span><span class="tag-chip green" data-tag="厂区">厂区</span><span class="tag-chip green" data-tag="园区">园区</span></div><div class="modal-sub-title">休闲开放类</div><div class="tag-grid"><span class="tag-chip green" data-tag="城市公园">城市公园</span><span class="tag-chip green" data-tag="场馆">场馆</span><span class="tag-chip green" data-tag="景区">景区</span></div></div>
+      <div class="modal-section"><div class="section-header"><span class="section-icon2 purple"></span><span class="section-title2">站点类型</span></div><div class="tag-grid"><span class="tag-chip purple" data-tag="标准站点">标准站点</span><span class="tag-chip purple" data-tag="临停站点">临停站点</span><span class="tag-chip purple" data-tag="即停即走">即停即走</span></div></div>
+      <div class="modal-remark"><label>备注</label><textarea placeholder="请输入备注信息..."></textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-reset" onclick="resetTags(this)">重置</button><button class="btn btn-secondary" onclick="closeSub('sub-start-fail')">取消</button><button class="btn btn-primary" onclick="confirmSub('sub-start-fail')">确认</button></div>
+  </div>
+</div>
+
+<!-- ═══════════ VERIFY RESULT MODAL ═══════════ -->
+<div class="modal-overlay" id="verify-modal">
+  <div class="modal verify-modal">
+    <div class="modal-header">
+      <span class="modal-title2">验证结果</span>
+      <button class="modal-close" onclick="closeVerifyModal()">&times;</button>
+    </div>
+    <div class="verify-body">
+      <label class="verify-option" onclick="selectVerifyOpt(this)">
+        <input type="radio" name="verify-result" value="pass">
+        <span class="verify-radio"></span>
+        <span>站点整体验证通过</span>
+      </label>
+      <label class="verify-option" onclick="selectVerifyOpt(this)">
+        <input type="radio" name="verify-result" value="fail">
+        <span class="verify-radio"></span>
+        <span>站点整体验证不通过</span>
+      </label>
+      <label class="verify-option" onclick="selectVerifyOpt(this)">
+        <input type="radio" name="verify-result" value="invalid">
+        <span class="verify-radio"></span>
+        <span>站点位置不合理</span>
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeVerifyModal()">取消</button>
+      <button class="btn btn-primary" onclick="confirmVerify()">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ DATA COLLECT MODAL ═══════════ -->
+<div class="dc-overlay" id="dc-overlay">
+  <div class="dc-modal">
+    <div class="dc-header">
+      <div class="dc-header-left">
+        <span class="dc-header-title">数据采集</span>
+        <span class="dc-agent-tag"><span class="ag-dot"></span>Agent A · 已连接</span>
+        <span class="dc-agent-tag"><span class="ag-dot"></span>Agent B · 已连接</span>
+      </div>
+      <div class="dc-time-group">
+        <div class="dc-time-item"><span class="dc-time-label">UTC</span><span class="dc-time-val">2026-06-11 08:32:50</span></div>
+        <div class="dc-time-item"><span class="dc-time-label">PTP</span><span class="dc-time-val">2026-06-11 16:32:50</span></div>
+      </div>
+      <div class="dc-header-spacer"></div>
+      <button class="dc-modal-close" onclick="closeDataCollectModal()">✕</button>
+    </div>
+    <div class="dc-body">
+      <!-- Left -->
+      <div class="dc-left">
+        <div class="dc-left-tabs">
+          <div class="dc-ltab active" onclick="dcSwitchLTab(this,'dc-pane-collect')">采集信息</div>
+          <div class="dc-ltab" onclick="dcSwitchLTab(this,'dc-pane-system')">系统信息</div>
+        </div>
+
+        <!-- Pane: 采集信息 -->
+        <div class="dc-left-pane active" id="dc-pane-collect">
+        <!-- Stats bar -->
+        <div class="dc-stats-bar">
+          <div class="dc-stat-cell"><div class="st-label">开始时间</div><div class="st-val">16:39:03</div></div>
+          <div class="dc-stat-cell"><div class="st-label">采集时长</div><div class="st-val">00:01</div></div>
+          <div class="dc-stat-cell"><div class="st-label">数据量</div><div class="st-val">219 KB</div></div>
+          <div class="dc-stat-cell"><div class="st-label">磁盘占用</div><div class="st-val">0.2 GB</div></div>
+        </div>
+
+        <div class="dc-left-body">
+          <!-- 采集概要 -->
+          <div class="dc-section-group">
+            <div class="dc-section-label">采集概要</div>
+            <div class="dc-info-row"><span class="dc-info-key">场景</span><span class="dc-info-val num">APA</span></div>
+            <div class="dc-info-row"><span class="dc-info-key">二级标签</span><span class="dc-info-val num">APA</span></div>
+            <div class="dc-info-row"><span class="dc-info-key">Pandar 128</span><span class="dc-info-val err">[×] 停用</span></div>
+            <div class="dc-info-row"><span class="dc-info-key">QT 128</span><span class="dc-info-val err">[×] 停用</span></div>
+            <div class="dc-info-row"><span class="dc-info-key">标签</span><span class="dc-info-val warn">[×] 未选</span></div>
+            <div class="dc-info-row"><span class="dc-info-key">落盘位置</span><span class="dc-info-val num">ADCU磁盘</span></div>
+          </div>
+
+          <!-- 磁盘状态 -->
+          <div class="dc-section-group">
+            <div class="dc-section-label">磁盘状态（ADCU）</div>
+            <div class="dc-info-row"><span class="dc-info-key">SocA 磁盘</span><span class="dc-info-val num">654.2GB <span style="color:var(--yellow)">35.7%</span></span></div>
+            <div class="dc-info-row"><span class="dc-info-key">NAS 磁盘</span><span class="dc-info-val num">1611.8GB <span style="color:var(--red)">88.5%</span></span></div>
+          </div>
+
+          <!-- 数据类型统计 -->
+          <div class="dc-section-group">
+            <div class="dc-section-label">数据类型统计</div>
+            <div class="dc-info-row"><span class="dc-info-key">视频</span><span class="dc-info-val num">0 KB</span></div>
+            <div class="dc-info-row"><span class="dc-info-key">点云</span><span class="dc-info-val num">0 KB</span></div>
+            <div class="dc-info-row"><span class="dc-info-key">结构化数据</span><span class="dc-info-val num">0 KB</span></div>
+          </div>
+
+          <!-- QT采集数据 -->
+          <div class="dc-section-group">
+            <div class="dc-section-label">QT采集数据</div>
+            <div class="dc-info-row"><span class="dc-info-key">Camera Front</span><span class="dc-info-val num">0 KB</span></div>
+            <div class="dc-info-row"><span class="dc-info-key">Camera Rear</span><span class="dc-info-val num">0 KB</span></div>
+            <div class="dc-info-row"><span class="dc-info-key">Camera Surround</span><span class="dc-info-val num">0 KB</span></div>
+          </div>
+
+          <!-- NAS 磁盘详情 -->
+          <div class="dc-section-group">
+            <div class="dc-section-label">NAS 磁盘详情</div>
+            <div class="dc-info-row"><span class="dc-info-key">本次采集大小</span><span class="dc-info-val num">0 KB</span></div>
+            <div class="dc-info-row"><span class="dc-info-key">Pandar数据大小</span><span class="dc-info-val num">0 KB</span></div>
+            <div class="dc-info-row"><span class="dc-info-key">QT 前数据大小</span><span class="dc-info-val num">0 KB</span></div>
+            <div class="dc-info-row"><span class="dc-info-key">QT 左数据大小</span><span class="dc-info-val num">0 KB</span></div>
+            <div class="dc-info-row"><span class="dc-info-key">QT 后数据大小</span><span class="dc-info-val num">0 KB</span></div>
+            <div class="dc-info-row"><span class="dc-info-key">QT 右数据大小</span><span class="dc-info-val num">0 KB</span></div>
+            <div class="dc-info-row"><span class="dc-info-key">USB速率</span><span class="dc-info-val warn">非USB3.0速率，可能Type-C插反</span></div>
+            <div class="dc-info-row"><span class="dc-info-key">开始时间</span><span class="dc-info-val num">20260327.192844</span></div>
+            <div class="dc-info-row"><span class="dc-info-key">采集时长</span><span class="dc-info-val num">123 秒</span></div>
+          </div>
+        </div>
+        </div><!-- /dc-pane-collect -->
+
+        <!-- Pane: 系统信息 -->
+        <div class="dc-left-pane" id="dc-pane-system">
+          <div class="dc-left-body">
+            <!-- 系统模块状态 -->
+            <div class="dc-section-group">
+              <div class="dc-section-label">系统模块状态</div>
+              <div class="dc-info-row"><span class="dc-info-key">磁盘挂载</span><span class="dc-info-val ok">[✓] OK</span></div>
+              <div class="dc-info-row"><span class="dc-info-key">时钟同步</span><span class="dc-info-val ok">[✓] OK</span></div>
+              <div class="dc-info-row"><span class="dc-info-key">PTP服务</span><span class="dc-info-val ok">[✓] OK</span></div>
+              <div class="dc-info-row"><span class="dc-info-key">/percp/ipm_stitch</span><span class="dc-info-val ok">[✓] OK</span></div>
+              <div class="dc-info-row"><span class="dc-info-key">/percp/ipm_od</span><span class="dc-info-val ok">[✓] OK</span></div>
+            </div>
+
+            <!-- 摄像头驱动状态 -->
+            <div class="dc-section-group">
+              <div class="dc-section-label">摄像头驱动状态</div>
+              <div class="dc-info-row"><span class="dc-info-key">Camera Front</span><span class="dc-info-val num">~10 Hz</span></div>
+              <div class="dc-info-row"><span class="dc-info-key">Camera Rear</span><span class="dc-info-val num">~10 Hz</span></div>
+              <div class="dc-info-row"><span class="dc-info-key">Camera Surround</span><span class="dc-info-val num">~10 Hz</span></div>
+              <div class="dc-info-row"><span class="dc-info-key">Camera Fisheye</span><span class="dc-info-val err">[×] 未挂载</span></div>
+            </div>
+
+            <!-- 运行进程 -->
+            <div class="dc-section-group">
+              <div class="dc-section-label">运行进程</div>
+              <div class="dc-info-row"><span class="dc-info-key">adcu_mgr</span><span class="dc-info-val ok">运行中</span></div>
+              <div class="dc-info-row"><span class="dc-info-key">ros2_driver</span><span class="dc-info-val ok">运行中</span></div>
+              <div class="dc-info-row"><span class="dc-info-key">data_logger</span><span class="dc-info-val err">未启动</span></div>
+            </div>
+          </div>
+        </div><!-- /dc-pane-system -->
+        <div class="dc-ctrl-section">
+          <div class="dc-ctrl-row">
+            <span class="dc-ctrl-label" style="margin-bottom:0;margin-right:4px">采集场景</span>
+            <div class="dc-select" id="dcSelect1" onclick="dcToggleSelect(this)">
+              <div class="dc-select-btn">NZP</div>
+              <div class="dc-select-dropdown">
+                <div class="dc-select-opt active" onclick="dcPickOpt(event,this)">NZP</div>
+                <div class="dc-select-opt" onclick="dcPickOpt(event,this)">APA</div>
+              </div>
+            </div>
+            <div class="dc-select" id="dcSelect2" onclick="dcToggleSelect(this)">
+              <div class="dc-select-btn">NZP-HW</div>
+              <div class="dc-select-dropdown">
+                <div class="dc-select-opt active" onclick="dcPickOpt(event,this)">NZP-HW</div>
+                <div class="dc-select-opt" onclick="dcPickOpt(event,this)">NZP-UB</div>
+                <div class="dc-select-opt" onclick="dcPickOpt(event,this)">LCC</div>
+                <div class="dc-select-opt" onclick="dcPickOpt(event,this)">ACC</div>
+              </div>
+            </div>
+          </div>
+          <div class="dc-ctrl-row" style="gap:24px;margin-bottom:14px">
+            <label class="dc-radio-label" style="cursor:pointer;padding:6px 0;min-height:40px" onclick="this.querySelector('.dc-dev-check').classList.toggle('checked')">
+              <div class="dc-dev-check" onclick="event.stopPropagation();this.classList.toggle('checked')"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+              <span>Pandar 128</span>
+            </label>
+            <label class="dc-radio-label" style="cursor:pointer;padding:6px 0;min-height:40px" onclick="this.querySelector('.dc-dev-check').classList.toggle('checked')">
+              <div class="dc-dev-check" onclick="event.stopPropagation();this.classList.toggle('checked')"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+              <span>Qt 128</span>
+            </label>
+            <label class="dc-radio-label" style="cursor:pointer;padding:6px 0;min-height:40px" onclick="this.querySelector('.dc-dev-check').classList.toggle('checked')">
+              <div class="dc-dev-check" onclick="event.stopPropagation();this.classList.toggle('checked')"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+              <span>标签</span>
+            </label>
+          </div>
+          <div class="dc-radio-group" style="margin-top:0;padding-top:14px">
+            <label class="dc-radio-label"><input type="radio" name="dc-disk" value="adcu" checked><span class="dc-radio-circle"></span>ADCU磁盘</label>
+            <label class="dc-radio-label"><input type="radio" name="dc-disk" value="dhu"><span class="dc-radio-circle"></span>DHU磁盘</label>
+          </div>
+        </div>
+        <div class="dc-left-footer">
+          <button class="dc-foot-btn outline">云端质检</button>
+          <button class="dc-foot-btn green-btn" onclick="dcShowStartInfo()">开始</button>
+        </div>
+      </div>
+      <!-- Right -->
+      <div class="dc-right">
+        <div class="dc-right-tabs">
+          <div class="dc-rtab active" onclick="dcSwitchRTab(this,'pane-soca')">SocA</div>
+          <div class="dc-rtab" onclick="dcSwitchRTab(this,'pane-socb')">SocB</div>
+          <div class="dc-rtab" onclick="dcSwitchRTab(this,'pane-tags')">标签</div>
+          <div class="dc-rtab" onclick="dcSwitchRTab(this,'pane-video')">视频查看</div>
+          <div class="dc-rtab" onclick="dcSwitchRTab(this,'pane-log')">落盘日志</div>
+          <div class="dc-rtab" onclick="dcSwitchRTab(this,'pane-qc')">质检列表</div>
+          <div class="dc-rtab" onclick="dcSwitchRTab(this,'pane-history')">采集记录</div>
+        </div>
+
+        <!-- Pane: SocA -->
+        <div class="dc-tab-pane active" id="pane-soca">
+          <div class="dc-topic-wrap">
+            <div class="dc-topic-header">SocA · 更新时间: <strong>20000103.235626</strong></div>
+            <div class="dc-topic-cols"><span class="tc-name">Topic_Name</span><span class="tc-hz">Hz</span></div>
+            <div class="dc-topic-list" id="dcSocAList"></div>
+            <div class="dc-topic-footer">
+              <div class="tf-stat"><div class="tf-dot" style="background:var(--green)"></div>正常 <strong id="dcSocAOk">0</strong></div>
+              <div class="tf-stat"><div class="tf-dot" style="background:var(--red)"></div>异常 <strong id="dcSocAErr">0</strong></div>
+              <div class="tf-stat" style="margin-left:auto">共 <strong id="dcSocATotal">0</strong> 项</div>
+            </div>
+          </div>
+        </div><!-- /pane-soca -->
+
+        <!-- Pane: SocB -->
+        <div class="dc-tab-pane" id="pane-socb">
+          <div class="dc-topic-wrap">
+            <div class="dc-topic-header">SocB · 更新时间: <strong>20000103.235626</strong></div>
+            <div class="dc-topic-cols"><span class="tc-name">Topic_Name</span><span class="tc-hz">Hz</span></div>
+            <div class="dc-topic-list" id="dcSocBList"></div>
+            <div class="dc-topic-footer">
+              <div class="tf-stat"><div class="tf-dot" style="background:var(--green)"></div>正常 <strong id="dcSocBOk">0</strong></div>
+              <div class="tf-stat"><div class="tf-dot" style="background:var(--red)"></div>异常 <strong id="dcSocBErr">0</strong></div>
+              <div class="tf-stat" style="margin-left:auto">共 <strong id="dcSocBTotal">0</strong> 项</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pane: 标签 (with collapsible scene groups) -->
+        <div class="dc-tab-pane" id="pane-tags">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);flex-shrink:0">
+            <span style="font-size:15px;font-weight:600">tab1</span>
+            <button class="dc-btn-clear" onclick="dcClearAllScenes()">一键清除</button>
+          </div>
+          <div class="dc-tag-content" id="dc-scene-list">
+            <!-- 专采场景-L946静态-单趟 -->
+            <div class="dc-tgroup">
+              <div class="dc-tgroup-header" onclick="dcToggleGroup(this.parentElement)">
+                <div class="dc-tg-check" onclick="event.stopPropagation();dcToggleGroupAll(this)"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+                <span class="dc-tg-title">专采场景-L946静态-单趟</span>
+                <span class="dc-tg-arrow">▼</span>
+              </div>
+              <div class="dc-tgroup-body">
+                <div class="dc-scene-grid">
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>白天-高速弯道</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>夜晚-高速弯道</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>白天-双无车道弯</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>夜晚-双无车道弯</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>夜晚-丁子路口</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>白天-城区路口</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>夜晚-城区少变多</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>夜晚-城区路口</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>白天-城区少变多</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>白天-丁子路口</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>白天-网格线</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>夜晚-网格线</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>白天-超宽车道</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>夜晚-超宽车道</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>白天-单边车道</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>夜晚-单边车道</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>白天-高速匝道汇</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>夜晚-高速匝道汇</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>闸机杆</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>信号灯</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>地上昏暗石砖</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>地上昏暗水泥</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>地上明亮石砖</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>地上明亮水泥</div>
+                </div>
+              </div>
+            </div>
+            <!-- 专采场景-L946-其他 -->
+            <div class="dc-tgroup">
+              <div class="dc-tgroup-header" onclick="dcToggleGroup(this.parentElement)">
+                <div class="dc-tg-check" onclick="event.stopPropagation();dcToggleGroupAll(this)"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+                <span class="dc-tg-title">专采场景-L946-其他</span>
+                <span class="dc-tg-arrow">▼</span>
+              </div>
+              <div class="dc-tgroup-body">
+                <div class="dc-scene-grid">
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>网格线</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>施工指示牌（可行）</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>左转专用道</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>公交车道漏检me</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>虚线掉头</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>交通牌（禁止通行）</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>警车</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>救护车</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>消防车</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>他车开车门</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>交通事故倒地车辆</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>施工区域</div>
+                </div>
+              </div>
+            </div>
+            <!-- 专采场景-L946-泊车 -->
+            <div class="dc-tgroup">
+              <div class="dc-tgroup-header" onclick="dcToggleGroup(this.parentElement)">
+                <div class="dc-tg-check" onclick="event.stopPropagation();dcToggleGroupAll(this)"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+                <span class="dc-tg-title">专采场景-L946-泊车</span>
+                <span class="dc-tg-arrow">▼</span>
+              </div>
+              <div class="dc-tgroup-body">
+                <div class="dc-scene-grid">
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>地上停车场-白名</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>地下停车场-白名</div>
+                </div>
+              </div>
+            </div>
+            <!-- 专采场景-L946-动态3D -->
+            <div class="dc-tgroup">
+              <div class="dc-tgroup-header" onclick="dcToggleGroup(this.parentElement)">
+                <div class="dc-tg-check" onclick="event.stopPropagation();dcToggleGroupAll(this)"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+                <span class="dc-tg-title">专采场景-L946-动态3D</span>
+                <span class="dc-tg-arrow">▼</span>
+              </div>
+              <div class="dc-tgroup-body">
+                <div class="dc-scene-grid">
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>白天-动态3D场景</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>夜晚-动态3D场景</div>
+                </div>
+              </div>
+            </div>
+            <!-- 专采场景-顺采场景 -->
+            <div class="dc-tgroup">
+              <div class="dc-tgroup-header" onclick="dcToggleGroup(this.parentElement)">
+                <div class="dc-tg-check" onclick="event.stopPropagation();dcToggleGroupAll(this)"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+                <span class="dc-tg-title">专采场景-顺采场景</span>
+                <span class="dc-tg-arrow">▼</span>
+              </div>
+              <div class="dc-tgroup-body">
+                <div class="dc-scene-grid">
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>新旧线</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>车道线衔接处空白</div>
+                </div>
+              </div>
+            </div>
+            <!-- 专采场景-停车场场景 -->
+            <div class="dc-tgroup">
+              <div class="dc-tgroup-header" onclick="dcToggleGroup(this.parentElement)">
+                <div class="dc-tg-check" onclick="event.stopPropagation();dcToggleGroupAll(this)"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+                <span class="dc-tg-title">专采场景-停车场场景</span>
+                <span class="dc-tg-arrow">▼</span>
+              </div>
+              <div class="dc-tgroup-body">
+                <div class="dc-scene-grid">
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>地下昏暗环氧漆面</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>地下明亮石砖</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>地下明亮水泥</div>
+                  <div class="dc-scene-item" onclick="dcToggleScene(this)"><div class="dc-scene-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>地下明亮环氧漆面</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div><!-- /pane-tags -->
+
+        <!-- Pane: 视频查看 -->
+        <div class="dc-tab-pane" id="pane-video">
+          <div class="dc-video-wrap">
+            <div class="dc-cam-list" id="dcCamList">
+              <button class="dc-cam-btn active" onclick="dcSelectCam(this,'前长')">前长</button>
+              <button class="dc-cam-btn" onclick="dcSelectCam(this,'前广')">前广</button>
+              <button class="dc-cam-btn" onclick="dcSelectCam(this,'后视')">后视</button>
+              <button class="dc-cam-btn" onclick="dcSelectCam(this,'左前')">左前</button>
+              <button class="dc-cam-btn" onclick="dcSelectCam(this,'左后')">左后</button>
+              <button class="dc-cam-btn" onclick="dcSelectCam(this,'右前')">右前</button>
+              <button class="dc-cam-btn" onclick="dcSelectCam(this,'右后')">右后</button>
+              <button class="dc-cam-btn" onclick="dcSelectCam(this,'前环视')">前环视</button>
+              <button class="dc-cam-btn" onclick="dcSelectCam(this,'左环视')">左环视</button>
+              <button class="dc-cam-btn" onclick="dcSelectCam(this,'后环视')">后环视</button>
+              <button class="dc-cam-btn" onclick="dcSelectCam(this,'右环视')">右环视</button>
+            </div>
+            <div class="dc-video-area" id="dcVideoArea">
+              <canvas class="dc-video-canvas" id="dcVideoCanvas"></canvas>
+              <div class="dc-video-overlay">
+                <div class="dc-video-badge"><span class="live-dot"></span>LIVE</div>
+                <div class="dc-video-badge" id="dcCamLabel">前长</div>
+              </div>
+              <div class="dc-video-bottom">
+                <span class="speed">3</span><span class="speed-unit">km/h</span>
+                <span class="gear-badge">D</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="rgba(255,255,255,.5)"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="rgba(255,255,255,.5)"><rect x="4" y="10" width="4" height="10" rx="1"/><rect x="10" y="4" width="4" height="16" rx="1"/><rect x="16" y="8" width="4" height="12" rx="1"/></svg>
+                <div style="flex:1"></div>
+                <span>VIN:LM8F7E990PA130360</span>
+                <span id="dcVideoTime"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Pane: 落盘日志 -->
+        <div class="dc-tab-pane" id="pane-log">
+          <div class="dc-log-wrap">
+            <div class="dc-log-toolbar">
+              <button class="dc-log-filter active" onclick="dcLogFilter(this,'all')">全部</button>
+              <button class="dc-log-filter" onclick="dcLogFilter(this,'d')">Debug</button>
+              <button class="dc-log-filter" onclick="dcLogFilter(this,'i')">Info</button>
+              <button class="dc-log-filter" onclick="dcLogFilter(this,'w')">Warn</button>
+              <button class="dc-log-filter" onclick="dcLogFilter(this,'e')">Error</button>
+              <input class="dc-log-search" placeholder="搜索日志..." oninput="dcLogSearch(this.value)">
+            </div>
+            <div class="dc-log-list" id="dcLogList"></div>
+            <div class="dc-log-status">
+              <span class="live"><span class="live-dot2"></span>实时日志</span>
+              <span id="dcLogCount">0 条</span>
+              <div style="flex:1"></div>
+              <span id="dcLogTime"></span>
+            </div>
+          </div>
+        </div>
+        <!-- Pane: 质检列表 -->
+        <div class="dc-tab-pane" id="pane-qc">
+          <div class="dc-qc-wrap">
+            <div class="dc-qc-header">
+              <span class="dc-qc-title">质检列表</span>
+              <div class="dc-qc-stats">
+                <div class="dc-qc-stat"><div class="dot" style="background:var(--blue)"></div>总计 <strong style="color:var(--text-primary)">10</strong></div>
+                <div class="dc-qc-stat"><div class="dot" style="background:var(--yellow)"></div>质检中 <strong style="color:var(--yellow)">4</strong></div>
+                <div class="dc-qc-stat"><div class="dot" style="background:var(--green)"></div>正常 <strong style="color:var(--green)">1</strong></div>
+                <div class="dc-qc-stat"><div class="dot" style="background:var(--red)"></div>有问题 <strong style="color:var(--red)">5</strong></div>
+              </div>
+            </div>
+            <div class="dc-qc-table-wrap">
+              <table class="dc-qc-table">
+                <thead>
+                  <tr>
+                    <th style="width:180px">事件时间</th>
+                    <th>采集包</th>
+                    <th style="width:160px">质检状态</th>
+                  </tr>
+                </thead>
+                <tbody id="dcQcBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <!-- Pane: 采集记录 -->
+        <div class="dc-tab-pane" id="pane-history">
+          <div class="dc-hist-wrap">
+            <div class="dc-hist-toolbar">
+              <button class="dc-hist-btn refresh-btn" onclick="dcHistRefresh()">刷新</button>
+              <button class="dc-hist-btn warn-btn" onclick="dcShowUnmount()">卸载磁盘</button>
+              <button class="dc-hist-btn danger-btn" onclick="dcHistRestart()">重启采集程序</button>
+            </div>
+            <div class="dc-hist-list" id="dcHistList"></div>
+            <div class="dc-hist-count" id="dcHistCount">共 0 条记录</div>
+          </div>
+        </div>
+
+        <!-- Unmount confirm dialog -->
+        <div class="dc-unmount-overlay" id="dcUnmountOverlay">
+          <div class="dc-unmount-dialog">
+            <div class="um-desc">停止采集 → 卸载磁盘 → 更换磁盘 → 挂载磁盘</div>
+            <div class="um-title">确认卸载？</div>
+            <div class="um-btns">
+              <button class="um-btn primary" onclick="dcConfirmUnmount()">确认</button>
+              <button class="um-btn secondary" onclick="dcCloseUnmount()">取消</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Unmount result dialog -->
+        <div class="dc-unmount-overlay" id="dcUnmountResultOverlay">
+          <div class="dc-unmount-dialog" style="text-align:left;max-height:80vh;overflow-y:auto">
+            <div style="text-align:center;font-size:18px;font-weight:700;margin-bottom:16px">提示</div>
+            <div style="border-top:1px dashed var(--border);margin-bottom:16px"></div>
+            <div style="font-size:14px;color:var(--green);line-height:2;margin-bottom:12px">
+              [✓] RosBag 采集停止成功<br>
+              [✓] NAS采集停止成功<br>
+              [✓] 必要配置文件收集成功
+            </div>
+            <div style="border-top:1px dashed var(--border);margin-bottom:16px"></div>
+            <div style="font-size:14px;color:var(--text-primary);line-height:1.9;margin-bottom:12px">
+              <strong>ROSBag 数据:</strong><br>
+              &nbsp;&nbsp;点云 数据：1.4M<br>
+              &nbsp;&nbsp;结构化数据：524M<br>
+              &nbsp;&nbsp;视频 数据：691M<br>
+              &nbsp;&nbsp;地理化数据：45M
+            </div>
+            <div style="border-top:1px dashed var(--border);margin-bottom:16px"></div>
+            <div style="font-size:14px;color:var(--text-primary);line-height:1.9;margin-bottom:20px">
+              <strong>NAS 数据:</strong><br>
+              &nbsp;&nbsp;Pandar128 &nbsp;数据大小: 3.0G<br>
+              &nbsp;&nbsp;qt128_front 数据大小: 565M<br>
+              &nbsp;&nbsp;qt128_left &nbsp;数据大小: 565M<br>
+              &nbsp;&nbsp;qt128_rear &nbsp;数据大小: 565M
+            </div>
+            <div style="text-align:center">
+              <button class="um-btn primary" style="width:60%;padding:12px" onclick="document.getElementById('dcUnmountResultOverlay').classList.remove('active')">确定</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Start info dialog -->
+        <div class="dc-unmount-overlay" id="dcStartInfoOverlay">
+          <div class="dc-unmount-dialog" style="text-align:left;max-height:80vh;overflow-y:auto;width:520px;max-width:92vw">
+            <div style="text-align:center;font-size:18px;font-weight:700;margin-bottom:16px">提示</div>
+            <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);line-height:1.8;white-space:pre-wrap;word-break:break-all;overflow-y:auto;max-height:400px;background:transparent;padding:0 4px;margin-bottom:20px">/media/sda1不可写 命令执行超时: touch /media/sda1/zdrive_data/test_write.txt
+
+Filesystem      Size  Used  Avail Use% Mounted on
+/dev/vblkdev0    11G  5.8G  4.4G  58% /
+/dev/vblkdev3   974M   32M  875M   4% /rw_overlay
+tmpfs            15G  1.2M   15G   1% /tmp
+overlay         974M   32M  875M   4% /etc
+overlay         974M   32M  875M   4% /home
+overlay         974M   32M  875M   4% /var
+overlay         974M   32M  875M   4% /media
+none             15G     0   15G   0% /dev
+tmpfs            15G  226M   15G   2% /dev/shm
+tmpfs           2.9G  1.4M  2.9G   1% /run
+tmpfs           5.0M     0  5.0M   0% /run/lock
+tmpfs            15G     0   15G   0% /sys/fs/cgroup
+/dev/vblkdev5   985M  144M  775M  16% /svp
+overlay          19G  2.1G   16G  12% /zeekr_pilot
+overlay          19G  2.1G   16G  12% /zeekr_plt
+/dev/vblkdev11  123G   37G   80G  32% /zeekr_data</div>
+            <div style="text-align:center">
+              <button class="um-btn primary" style="width:60%;padding:12px" onclick="document.getElementById('dcStartInfoOverlay').classList.remove('active')">确定</button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /dc-right -->
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ PKG DOWNLOAD DIALOG ═══════════ -->
+<div class="pkg-dl-overlay" id="pkgDlOverlay">
+  <div class="pkg-dl-dialog">
+    <div class="pkg-dl-title">小包助手</div>
+    <div class="pkg-dl-warning">
+      <span class="warn-dot"></span>
+      <span>小包操作期间，不要进行【其它OTA操作】、【关闭打点工具】、【下电】、【车辆行驶】等操作，以免造成影响</span>
+    </div>
+    <div class="pkg-dl-status">小包下载中</div>
+    <div class="pkg-dl-progress-wrap">
+      <div class="pkg-dl-bar"><div class="pkg-dl-bar-fill" id="pkgDlFill"></div></div>
+      <span class="pkg-dl-percent" id="pkgDlPercent">0%</span>
+    </div>
+    <div class="pkg-dl-check" onclick="this.classList.toggle('checked')">
+      <div class="chk-box"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+      <span>下载完成，安装自启</span>
+    </div>
+    <div class="pkg-dl-info">
+      APP版本: 2.4.0_667_19_06101122_1e4c67e_pad<br>
+      VIN: L6T79E2K4KD654321<br>
+      小包名称: ZRD.RD.PILOT.V20.0.3.2025.24.6.145121.tar.gz
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ PKG CHECK MODAL ═══════════ -->
+<div class="pkg-check-overlay" id="pkgCheckOverlay">
+  <div class="pkg-check-modal">
+    <div class="pkg-check-header">
+      <h3>小包助手</h3>
+      <button class="pkg-check-close" onclick="closePkgCheck()">✕</button>
+    </div>
+    <div class="pkg-check-body" id="pkgCheckBody"></div>
+    <div class="pkg-check-footer" id="pkgCheckFooter" style="display:none">
+      <button class="pkg-retry-btn" onclick="startPkgCheck()">重新检测</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ PKG LIST MODAL ═══════════ -->
+<div class="pkg-list-overlay" id="pkgListOverlay">
+  <div class="pkg-list-modal">
+    <div class="pkg-list-header">
+      <button class="pkg-toolbar-btn" style="display:flex;align-items:center;gap:6px;padding:8px 18px;margin-right:16px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>还原版本</button>
+      <div class="pkg-list-tabs">
+        <div class="pkg-list-tab active" onclick="switchPkgTab(this)">未下载小包</div>
+        <div class="pkg-list-tab" onclick="switchPkgTab(this)">未安装小包</div>
+        <div class="pkg-list-tab" onclick="switchPkgTab(this)">已安装小包</div>
+      </div>
+      <button class="pkg-list-close" onclick="closePkgList()">✕</button>
+    </div>
+    <div class="pkg-list-toolbar">
+      <div class="pkg-search">
+        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <input placeholder="请检索小包">
+      </div>
+      <button class="pkg-toolbar-btn" style="background:var(--blue);color:#fff;border-color:var(--blue)">确认</button>
+      <div style="flex:1"></div>
+      <button class="pkg-toolbar-btn">U盘VBF升级</button>
+      <button class="pkg-toolbar-btn">卸载全部</button>
+      <button class="pkg-toolbar-btn" id="pkgConfigBtn" onclick="var p=document.getElementById('pkgConfigPanel');var b=document.getElementById('pkgConfigArrow');if(p.style.maxHeight==='0px'||p.style.maxHeight===''){p.style.maxHeight='120px';p.style.padding='16px 28px';p.style.borderBottom='1px solid var(--border)';b.textContent='∧'}else{p.style.maxHeight='0px';p.style.padding='0 28px';p.style.borderBottom='none';b.textContent='∨'}">安装配置 <span id="pkgConfigArrow">∨</span></button>
+      <button class="pkg-toolbar-btn refresh">刷新</button>
+    </div>
+    <div id="pkgConfigPanel" style="overflow:hidden;max-height:0;padding:0 28px;border-bottom:none;font-size:13px;color:var(--text-secondary);transition:max-height .2s ease,padding .2s ease,border-bottom .2s ease">
+      <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+        <span style="color:var(--text-primary);font-weight:600">解决方案包配置：</span>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">签名校验<label class="switch t-blue" style="margin-left:2px"><input type="checkbox" checked><span class="slider"></span></label></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">ADPU安装<label class="switch t-blue" style="margin-left:2px"><input type="checkbox"><span class="slider"></span></label></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">AVM安装<label class="switch t-blue" style="margin-left:2px"><input type="checkbox"><span class="slider"></span></label></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">Switch安装<label class="switch t-blue" style="margin-left:2px"><input type="checkbox" checked><span class="slider"></span></label></label>
+      </div>
+      <div style="display:flex;align-items:center;gap:18px;margin-top:10px">
+        <span style="color:var(--text-primary);font-weight:600">小包配置：</span>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">是否备份<label class="switch t-blue" style="margin-left:2px"><input type="checkbox" checked><span class="slider"></span></label></label>
+      </div>
+    </div>
+    <div class="pkg-items" id="pkgItems"></div>
+    <div class="pkg-list-footer">
+      <span class="clickable" onclick="openDocModal()">功能说明文档 ∧</span>
+      <span>目录使用详情 ∧</span>
+      <span>SOC分区</span>
+      <span>解决方案版本</span>
+      <span>包类型：未知</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// Station data
+const stations=[
+  {idx:1,name:'浙江省杭州市萧山区北干街道嘉兴路文本文本文本文本文本文本文',pos:'(120.12342323, 323.1123)',result:'pass',resultLabel:'通过'},
+  {idx:2,name:'浙江省杭州市萧山区北干街道嘉兴路文本文本文本文本文本文本文',pos:'(120.12342323, 323.1123)',result:'pass',resultLabel:'通过'},
+  {idx:3,name:'浙江省杭州市萧山区北干街道嘉兴路文本文本文本文本文本文本文',pos:'(120.12342323, 323.1123)',result:'pass',resultLabel:'通过'},
+  {idx:4,name:'浙江省杭州市萧山区北干街道嘉兴路文本文本文本文本文本文本文',pos:'(120.12342323, 323.1123)',result:'pending',resultLabel:'待验证'},
+  {idx:5,name:'浙江省杭州市萧山区北干街道嘉兴路文本文本文本文本文本文本文',pos:'(120.12342323, 323.1123)',result:'pending',resultLabel:'待验证'},
+  {idx:6,name:'浙江省杭州市萧山区北干街道嘉兴路文本文本文本文本文本文本文',pos:'(120.12342323, 323.1123)',result:'pending',resultLabel:'待验证'},
+  {idx:7,name:'浙江省杭州市萧山区北干街道嘉兴路文本文本文本文本文本文本文',pos:'(120.12342323, 323.1123)',result:'fail',resultLabel:'失败'},
+  {idx:8,name:'浙江省杭州市萧山区北干街道嘉兴路文本文本文本文本文本文本文',pos:'(120.12342323, 323.1123)',result:'invalid',resultLabel:'不合理'},
+];
+
+const navSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:14px;height:14px"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>';
+const navSvgSm='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:12px;height:12px"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>';
+
+function buildCards(){
+  document.getElementById('station-grid').innerHTML=stations.map(s=>`
+    <div class="station-card">
+      <div class="card-header"><div class="card-index">${s.idx}</div><div><div class="card-name">${s.name}</div><div class="card-pos">${s.pos}</div></div><button class="card-nav-btn">${navSvg}导航</button></div>
+      <div class="card-divider"></div>
+      <div class="card-status-row">
+        <button class="status-btn bs" onclick="openSubModal('sub-dock-success')"><span class="sb-label">停靠状态</span><span class="sb-val">成功</span></button>
+        <button class="status-btn bf" onclick="openSubModal('sub-dock-fail')"><span class="sb-label">停靠失败</span><span class="sb-val">失败</span></button>
+        <button class="status-btn bf" onclick="openSubModal('sub-start-fail')"><span class="sb-label">起步状态</span><span class="sb-val">失败</span></button>
+      </div>
+      <div class="card-footer"><button class="verify-btn" onclick="openVerifyModal()">验证</button><span class="result-badge ${s.result}"><span class="result-dot ${s.result}"></span>${s.resultLabel}</span></div>
+    </div>`).join('');
+}
+function buildTable(){
+  document.getElementById('table-body').innerHTML=stations.map(s=>`
+    <tr><td class="td-idx">${s.idx}</td><td class="td-name">${s.name}</td><td class="td-pos">${s.pos}</td>
+    <td><button class="td-nav-btn">${navSvgSm}导航</button></td>
+    <td><button class="td-status-btn success" onclick="openSubModal('sub-dock-success')">成功</button></td>
+    <td><button class="td-status-btn fail" onclick="openSubModal('sub-dock-fail')">失败</button></td>
+    <td><button class="td-status-btn fail" onclick="openSubModal('sub-start-fail')">失败</button></td>
+    <td><button class="td-verify-btn" onclick="openVerifyModal()">验证</button></td>
+    <td><span class="result-badge ${s.result}"><span class="result-dot ${s.result}"></span>${s.resultLabel}</span></td></tr>`).join('');
+}
+
+function switchView(view){
+  document.querySelectorAll('.view-toggle-btn').forEach(b=>b.classList.remove('active2'));
+  document.querySelector('[data-view="'+view+'"]').classList.add('active2');
+  document.getElementById('view-cards').classList.toggle('active',view==='cards');
+  document.getElementById('view-table').classList.toggle('active',view==='table');
+}
+
+// Station Modal
+function openStationModal(){
+  document.getElementById('main-overlay').classList.add('active');
+}
+function closeStationModal(){
+  document.getElementById('main-overlay').classList.remove('active');
+}
+document.getElementById('main-overlay').addEventListener('click',function(e){
+  if(e.target===this) closeStationModal();
+});
+
+// Sub Modals
+function openSubModal(id){
+  const el=document.getElementById(id);
+  el.querySelectorAll('.tag-chip').forEach(c=>{c.classList.remove('selected');c.onclick=function(){this.classList.toggle('selected');};});
+  el.querySelector('textarea').value='';
+  el.classList.add('active');
+  el.onclick=function(e){if(e.target===el) closeSub(id);};
+}
+function closeSub(id){document.getElementById(id).classList.remove('active');}
+function resetTags(btn){
+  const el=btn.closest('.modal-overlay');
+  el.querySelectorAll('.tag-chip.selected').forEach(c=>c.classList.remove('selected'));
+  el.querySelector('textarea').value='';
+}
+function confirmSub(id){
+  const el=document.getElementById(id);
+  const sel=[];el.querySelectorAll('.tag-chip.selected').forEach(c=>sel.push(c.dataset.tag));
+  console.log('确认:',{modal:id,tags:sel,remark:el.querySelector('textarea').value.trim()});
+  closeSub(id);
+}
+
+// Verify Modal
+function openVerifyModal(){
+  document.getElementById('verify-modal').querySelectorAll('.verify-option').forEach(o=>o.classList.remove('selected'));
+  document.getElementById('verify-modal').querySelectorAll('input[type="radio"]').forEach(r=>r.checked=false);
+  document.getElementById('verify-modal').classList.add('active');
+  document.getElementById('verify-modal').onclick=function(e){if(e.target===this)closeVerifyModal();};
+}
+function closeVerifyModal(){
+  document.getElementById('verify-modal').classList.remove('active');
+}
+function selectVerifyOpt(el){
+  document.getElementById('verify-modal').querySelectorAll('.verify-option').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  el.querySelector('input[type="radio"]').checked=true;
+}
+function confirmVerify(){
+  const sel=document.getElementById('verify-modal').querySelector('.verify-option.selected input');
+  if(sel) console.log('验证结果:',sel.value);
+  closeVerifyModal();
+}
+
+// ═══════════ SOC TOPIC LISTS ═══════════
+const dcTopicData = [
+  {s:'err', name:'/driver/radar_left_front_cluster', hz:'0.0'},
+  {s:'err', name:'/driver/radar_left_front_object', hz:'0.0'},
+  {s:'err', name:'/driver/radar_right_front_cluster', hz:'0.0'},
+  {s:'err', name:'/driver/radar_right_front_object', hz:'0.0'},
+  {s:'ok', name:'/driver/adas_arb_result', hz:'211.0'},
+  {s:'ok', name:'/driver/adpu_calib_params', hz:'4.0'},
+  {s:'ok', name:'/driver/camera_front_long_image', hz:'42.0'},
+  {s:'ok', name:'/driver/camera_front_wide_image', hz:'42.2'},
+  {s:'warn', name:'/driver/camera_front_wide_image_lite', hz:'未收到'},
+  {s:'warn', name:'/driver/camera_infrared', hz:'未收到'},
+  {s:'ok', name:'/driver/camera_rear_image', hz:'42.0'},
+  {s:'ok', name:'/driver/camera_side_left_front_image', hz:'42.0'},
+  {s:'ok', name:'/driver/camera_side_left_rear_image', hz:'42.0'},
+  {s:'ok', name:'/driver/camera_side_right_front_image', hz:'42.0'},
+  {s:'ok', name:'/driver/camera_side_right_rear_image', hz:'42.0'},
+  {s:'ok', name:'/driver/camera_surround_front_image', hz:'40.0'},
+  {s:'ok', name:'/driver/camera_surround_left_image', hz:'40.0'},
+  {s:'ok', name:'/driver/camera_surround_rear_image', hz:'40.0'},
+  {s:'ok', name:'/driver/camera_surround_right_image', hz:'40.0'},
+  {s:'ok', name:'/driver/chassis_info', hz:'212.0'},
+  {s:'warn', name:'/driver/gnss_rawdata', hz:'未收到'},
+  {s:'ok', name:'/driver/imu', hz:'423.5'},
+  {s:'ok', name:'/driver/ins_loc_algorithm_info', hz:'211.5'},
+  {s:'ok', name:'/driver/radar_front_cluster', hz:'84.8'},
+  {s:'ok', name:'/driver/radar_front_object', hz:'84.8'},
+  {s:'ok', name:'/driver/radar_left_rear_cluster', hz:'85.0'},
+  {s:'ok', name:'/driver/radar_left_rear_object', hz:'85.0'},
+  {s:'ok', name:'/driver/radar_right_rear_cluster', hz:'85.0'},
+  {s:'ok', name:'/driver/radar_right_rear_object', hz:'84.8'},
+  {s:'ok', name:'/driver/rtk', hz:'0.0'},
+  {s:'ok', name:'/driver/rtk_intg', hz:'5.2'},
+  {s:'ok', name:'/driver/uss_echo_info', hz:'212.0'},
+  {s:'ok', name:'/driver/uss_obj_info', hz:'212.0'},
+  {s:'ok', name:'/driver/uss_par_set_info', hz:'84.8'},
+  {s:'ok', name:'/driver/uss_parking_slot', hz:'84.8'},
+  {s:'ok', name:'/driver/uss_pdc', hz:'141.2'},
+  {s:'ok', name:'/driver/uss_point_info', hz:'84.8'},
+  {s:'ok', name:'/driver/uss_wave_info', hz:'84.8'},
+  {s:'ok', name:'/hmi/adas_map_info', hz:'0.0'},
+  {s:'ok', name:'/hmi/hmi_navi_forecast', hz:'42.2'},
+  {s:'ok', name:'/hmi/hmi_rapainfo', hz:'106.0'},
+  {s:'ok', name:'/hmi/hmi_sdmap', hz:'42.2'},
+  {s:'ok', name:'/hmi/hmi_setting', hz:'84.2'},
+  {s:'ok', name:'/hmi/hmi_to_fsm', hz:'84.8'},
+  {s:'ok', name:'/hmi/hmi_to_percp', hz:'84.5'},
+];
+
+function dcBuildTopicList(listId, okId, errId, totalId) {
+  const list = document.getElementById(listId);
+  if (!list) return;
+  let okCount = 0, errCount = 0;
+  list.innerHTML = dcTopicData.map(t => {
+    const isErr = t.s === 'err' || t.s === 'warn';
+    if (isErr) errCount++; else okCount++;
+    const statusIcon = t.s === 'err' ? 'X' : (t.s === 'warn' ? 'W' : '');
+    const rowCls = t.s === 'ok' ? 'ok-row' : (t.s === 'err' ? 'err-row' : 'warn-row');
+    const shortName = t.name.replace(/^\/driver\/|^\/hmi\//,'');
+    const hzHtml = (t.s === 'warn')
+      ? '<span class="tr-hz-badge warn">未收到</span>'
+      : '<span class="tr-hz">' + t.hz + '</span>';
+    return '<div class="dc-topic-row ' + rowCls + '">' +
+      (statusIcon ? '<span class="tr-status ' + t.s + '">' + statusIcon + '</span>' : '') +
+      '<span class="tr-name">' + shortName + '</span>' +
+      hzHtml + '</div>';
+  }).join('');
+  document.getElementById(okId).textContent = okCount;
+  document.getElementById(errId).textContent = errCount;
+  document.getElementById(totalId).textContent = dcTopicData.length;
+}
+
+dcBuildTopicList('dcSocAList','dcSocAOk','dcSocAErr','dcSocATotal');
+dcBuildTopicList('dcSocBList','dcSocBOk','dcSocBErr','dcSocBTotal');
+
+// ═══════════ HISTORY TAB ═══════════
+const dcHistData = [
+  'L6T79CAD6SV000910_ZRD.V3.1-H7-TU.G30a.2026.9.d3.88120317041110_20260331.173247',
+  'L6T79CAD6SV000910_ZRD.V3.1-H7-TU.G30a.2026.9.d3.88120317041110_20260331.134937',
+  'L6T79CAD6SV000910_ZRD.V3.1-H7-TU.G30a.2026.9.d3.88120317041110_20260331.104644',
+  'L6T79CAD6SV000910_ZRD.V3.1-H7-TU.G30a.2026.9.d3.88120317041110_20260331.091639',
+  'L6T79CAD6SV000910_ZRD.V3.1-H7-TU.G30a.2026.9.d3.88120317041110_20260330.225422',
+  'L6T79CAD6SV000910_ZRD.V3.1-H7-TU.G30a.2026.9.d3.88120317041110_20260330.213149',
+  'L6T79CAD6SV000910_ZRD.V3.1-H7-TU.G30a.2026.9.d3.88120317041110_20260330.201612',
+  'L6T79CAD6SV000910_ZRD.V3.1-H7-TU.G30a.2026.9.d3.88120317041110_20260330.184148',
+  'L6T79CAD6SV000910_ZRD.V3.1-H7-TU.G30a.2026.9.d3.88120317041110_20260330.164244',
+];
+
+function dcBuildHistory() {
+  const list = document.getElementById('dcHistList');
+  if (!list) return;
+  const header = '<div class="dc-hist-thead"><span class="th-name">采集包名称</span><span class="th-action">操作</span></div>';
+  const rows = dcHistData.map((name, i) =>
+    '<div class="dc-hist-row">' +
+    '<span class="dc-hist-name">' + name + '</span>' +
+    '<button class="dc-hist-del" onclick="dcDeleteHist(this,' + i + ')">删除</button>' +
+    '</div>'
+  ).join('');
+  list.innerHTML = header + rows;
+  document.getElementById('dcHistCount').textContent = '共 ' + dcHistData.length + ' 条记录';
+}
+
+function dcDeleteHist(btn, idx) {
+  const row = btn.closest('.dc-hist-row');
+  row.style.opacity = '0';
+  row.style.transform = 'translateX(20px)';
+  row.style.transition = 'all .2s';
+  setTimeout(() => {
+    dcHistData.splice(idx, 1);
+    dcBuildHistory();
+  }, 200);
+}
+
+function dcHistRefresh() {
+  dcBuildHistory();
+}
+
+function dcHistRestart() {
+  const btn = document.querySelector('.dc-hist-btn.danger-btn');
+  btn.textContent = '重启中...';
+  btn.style.opacity = '.6';
+  setTimeout(() => { btn.textContent = '重启采集程序'; btn.style.opacity = '1'; }, 1500);
+}
+
+function dcShowUnmount() {
+  document.getElementById('dcUnmountOverlay').classList.add('active');
+}
+function dcCloseUnmount() {
+  document.getElementById('dcUnmountOverlay').classList.remove('active');
+}
+function dcConfirmUnmount() {
+  dcCloseUnmount();
+  document.getElementById('dcUnmountResultOverlay').classList.add('active');
+}
+document.getElementById('dcUnmountOverlay').addEventListener('click', function(e) {
+  if (e.target === this) dcCloseUnmount();
+});
+document.getElementById('dcUnmountResultOverlay').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('active');
+});
+document.getElementById('dcStartInfoOverlay').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('active');
+});
+
+function dcShowStartInfo() {
+  document.getElementById('dcStartInfoOverlay').classList.add('active');
+}
+
+dcBuildHistory();
+
+buildCards();buildTable();
+
+// ═══════════ DATA COLLECT ═══════════
+// Custom select dropdown
+function dcToggleSelect(el) { el.classList.toggle('open'); }
+function dcPickOpt(e, opt) {
+  e.stopPropagation();
+  const sel = opt.closest('.dc-select');
+  sel.querySelector('.dc-select-btn').textContent = opt.textContent;
+  sel.querySelectorAll('.dc-select-opt').forEach(o => o.classList.remove('active'));
+  opt.classList.add('active');
+  sel.classList.remove('open');
+
+  // Linkage: if first select changed, update second select options
+  if (sel.id === 'dcSelect1') {
+    const val = opt.textContent.trim();
+    const sel2 = document.getElementById('dcSelect2');
+    const dropdown = sel2.querySelector('.dc-select-dropdown');
+    let options = [];
+    if (val === 'NZP') {
+      options = ['NZP-HW', 'NZP-UB', 'LCC', 'ACC'];
+    } else if (val === 'APA') {
+      options = ['APA', 'RSPA', 'RAPA', 'LP', 'MP'];
+    }
+    dropdown.innerHTML = options.map((o, i) =>
+      '<div class="dc-select-opt' + (i === 0 ? ' active' : '') + '" onclick="dcPickOpt(event,this)">' + o + '</div>'
+    ).join('');
+    sel2.querySelector('.dc-select-btn').textContent = options[0];
+  }
+}
+document.addEventListener('click', function(e) {
+  document.querySelectorAll('.dc-select.open').forEach(s => {
+    if (!s.contains(e.target)) s.classList.remove('open');
+  });
+});
+
+// ═══════════ PKG CHECK FLOW ═══════════
+function openPkgCheckModal() {
+  document.getElementById('pkgCheckOverlay').classList.add('active');
+  startPkgCheck();
+}
+function closePkgCheck() {
+  document.getElementById('pkgCheckOverlay').classList.remove('active');
+}
+document.getElementById('pkgCheckOverlay').addEventListener('click',function(e){if(e.target===this)closePkgCheck();});
+
+function startPkgCheck() {
+  const body = document.getElementById('pkgCheckBody');
+  const footer = document.getElementById('pkgCheckFooter');
+  footer.style.display = 'none';
+
+  body.innerHTML = `
+    <div class="pkg-check-status">环境检测中</div>
+    <div class="pkg-progress-bar"><div class="pkg-progress-fill loading" style="width:60%"></div></div>
+    <div class="pkg-check-section">
+      <div class="pkg-check-section-title">云端检测</div>
+      <div class="pkg-check-item"><div class="ci-icon loading"><svg viewBox="0 0 24 24"><path d="M12 6v6l4 2"/></svg></div><span class="ci-name">车辆信息检测</span><span class="ci-status checking">检测中</span></div>
+    </div>
+    <div class="pkg-check-section">
+      <div class="pkg-check-section-title">车端检测</div>
+      <div class="pkg-check-item"><div class="ci-icon loading"><svg viewBox="0 0 24 24"><path d="M12 6v6l4 2"/></svg></div><span class="ci-name">ADCU SSH检测</span><span class="ci-status checking">检测中</span></div>
+    </div>
+    <div class="pkg-info-section">
+      <div class="pkg-info-section-title">车辆信息</div>
+      <div class="pkg-info-item"><span class="pi-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33" fill="none" stroke="currentColor" stroke-width="2"/></svg></span><span class="pi-label">APP</span><span class="pi-val">2.3.0_372_87_128922992_2929922</span></div>
+      <div class="pkg-info-item"><span class="pi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="8" width="20" height="10" rx="2"/><circle cx="7" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/></svg></span><span class="pi-label">VIN</span><span class="pi-val">L28299AJSNDJUUJ892920</span></div>
+      <div class="pkg-info-item"><span class="pi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg></span><span class="pi-label">车端环境</span><span class="pi-val">XXXXX</span></div>
+    </div>`;
+
+  // Simulate check
+  setTimeout(function() {
+    const pass = Math.random() > 0.3;
+    if (pass) {
+      showPkgCheckPass(body);
+    } else {
+      showPkgCheckFail(body, footer);
+    }
+  }, 2500);
+}
+
+function showPkgCheckPass(body) {
+  body.querySelector('.pkg-check-status').textContent = '环境检测通过';
+  body.querySelector('.pkg-progress-fill').className = 'pkg-progress-fill success';
+  body.querySelectorAll('.ci-icon').forEach(i => { i.className = 'ci-icon ok'; i.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>'; });
+  body.querySelectorAll('.ci-status').forEach(s => { s.className = 'ci-status ok'; s.textContent = '正常'; });
+
+  // After pass, show package list
+  setTimeout(function() {
+    closePkgCheck();
+    openPkgList();
+  }, 1000);
+}
+
+function showPkgCheckFail(body, footer) {
+  body.querySelector('.pkg-check-status').textContent = '环境检测失败';
+  body.querySelector('.pkg-check-status').style.color = 'var(--red)';
+  body.querySelector('.pkg-progress-fill').className = 'pkg-progress-fill error';
+  body.querySelectorAll('.ci-icon')[0].className = 'ci-icon ok';
+  body.querySelectorAll('.ci-icon')[0].innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+  body.querySelectorAll('.ci-status')[0].className = 'ci-status ok';
+  body.querySelectorAll('.ci-status')[0].textContent = '正常';
+  body.querySelectorAll('.ci-icon')[1].className = 'ci-icon err';
+  body.querySelectorAll('.ci-icon')[1].innerHTML = '<svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke="#fff" stroke-width="2" fill="none"/></svg>';
+  body.querySelectorAll('.ci-status')[1].className = 'ci-status err';
+  body.querySelectorAll('.ci-status')[1].textContent = '失败';
+
+  // Insert fail reason
+  const failDiv = document.createElement('div');
+  failDiv.className = 'pkg-fail-reason';
+  failDiv.textContent = '失败原因：ADCU SSH 连接超时，请检查网络连接或重试';
+  body.querySelector('.pkg-info-section').insertAdjacentElement('beforebegin', failDiv);
+
+  footer.style.display = 'block';
+}
+
+// ═══════════ PKG LIST ═══════════
+function openPkgList() {
+  document.getElementById('pkgListOverlay').classList.add('active');
+  buildPkgList();
+}
+function closePkgList() {
+  document.getElementById('pkgListOverlay').classList.remove('active');
+}
+document.getElementById('pkgListOverlay').addEventListener('click',function(e){if(e.target===this)closePkgList();});
+
+function buildPkgList() {
+  const pkgs = [
+    {name:'ssddhijjhPPPaajkak_hsuiPPajiqjj_wjwkwk', time:'2026-09-09 16:09:09', size:'13M', pusher:'王海涛', desc:'正式版本测试'},
+    {name:'ssddhijjhPPPaajkak_hsuiPPajiqjj_wjwkwk', time:'2026-09-08 14:32:18', size:'8.5M', pusher:'张伟', desc:'opt rc_provider'},
+    {name:'ssddhijjhPPPaajkak_hsuiPPajiqjj_wjwkwk', time:'2026-09-07 10:21:45', size:'21M', pusher:'李明', desc:'自标定-pitch落盘'},
+    {name:'ssddhijjhPPPaajkak_hsuiPPajiqjj_wjwkwk', time:'2026-09-06 18:55:30', size:'15.2M', pusher:'陈刚', desc:'NZP功能迭代'},
+    {name:'ssddhijjhPPPaajkak_hsuiPPajiqjj_wjwkwk', time:'2026-09-05 09:12:07', size:'9.8M', pusher:'刘洋', desc:'传感器校准更新'},
+    {name:'ssddhijjhPPPaajkak_hsuiPPajiqjj_wjwkwk', time:'2026-09-04 22:40:11', size:'18.6M', pusher:'赵强', desc:'APA泊车优化'},
+    {name:'ssddhijjhPPPaajkak_hsuiPPajiqjj_wjwkwk', time:'2026-09-03 15:28:33', size:'11.3M', pusher:'孙磊', desc:'24.1pre-3'},
+  ];
+  const container = document.getElementById('pkgItems');
+  container.innerHTML = pkgs.map(p => `
+    <div class="pkg-item">
+      <div class="pkg-item-icon"><svg viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg></div>
+      <div class="pkg-item-info">
+        <div class="pkg-item-name">${p.name}<span class="ptag">pilot</span></div>
+        <div class="pkg-item-meta">
+          <span>创建时间：${p.time}</span>
+        </div>
+        <div class="pkg-item-meta">
+          <span>包大小：${p.size}</span>
+          <span>推送人：${p.pusher}</span>
+          <span>描述：${p.desc}</span>
+        </div>
+      </div>
+      <div class="pkg-item-btns">
+        <button class="pkg-dl-btn" onclick="openPkgDownload()"><svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>下载</button>
+        <button class="pkg-dl-btn install">一键安装</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Tab switching
+function switchPkgTab(el) {
+  el.parentElement.querySelectorAll('.pkg-list-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// Download dialog
+function openPkgDownload() {
+  document.getElementById('pkgDlOverlay').classList.add('active');
+  // Animate progress
+  let pct = 0;
+  const fill = document.getElementById('pkgDlFill');
+  const label = document.getElementById('pkgDlPercent');
+  fill.style.width = '0%';
+  label.textContent = '0%';
+  const iv = setInterval(function() {
+    pct += Math.floor(Math.random() * 5 + 1);
+    if (pct > 100) pct = 100;
+    fill.style.width = pct + '%';
+    label.textContent = pct + '%';
+    if (pct >= 100) clearInterval(iv);
+  }, 300);
+}
+document.getElementById('pkgDlOverlay').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('active');
+});
+function openDataCollectModal(){
+  document.getElementById('dc-overlay').classList.add('active');
+}
+function closeDataCollectModal(){
+  window.close();if(!window.closed)location.href='index.html';
+}
+window.addEventListener('load', function(){ openDataCollectModal(); });
+document.getElementById('dc-overlay').addEventListener('click',function(e){
+  if(e.target===this) closeDataCollectModal();
+});
+function dcSwitchLTab(el, paneId){
+  el.parentElement.querySelectorAll('.dc-ltab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.dc-left .dc-left-pane').forEach(p=>p.classList.remove('active'));
+  if(paneId) document.getElementById(paneId).classList.add('active');
+}
+function dcSwitchRTab(el, paneId){
+  el.parentElement.querySelectorAll('.dc-rtab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('#dc-overlay .dc-tab-pane').forEach(p=>p.classList.remove('active'));
+  if(paneId) document.getElementById(paneId).classList.add('active');
+}
+function dcSwitchSub(el){
+  el.parentElement.querySelectorAll('.dc-stab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+function dcToggleGroup(el){ el.classList.toggle('open'); }
+function dcClearAll(){
+  document.querySelectorAll('#pane-soca .dc-chip.selected').forEach(c=>c.classList.remove('selected'));
+  document.querySelectorAll('#pane-soca .dc-tg-check.checked').forEach(c=>c.classList.remove('checked'));
+}
+function dcClearAllScenes(){
+  document.querySelectorAll('#pane-tags .dc-scene-item.checked').forEach(c=>c.classList.remove('checked'));
+  document.querySelectorAll('#pane-tags .dc-tg-check.checked').forEach(c=>c.classList.remove('checked'));
+}
+function dcToggleScene(el){ el.classList.toggle('checked'); }
+function dcToggleGroupAll(checkEl){
+  checkEl.classList.toggle('checked');
+  const group = checkEl.closest('.dc-tgroup');
+  const items = group.querySelectorAll('.dc-scene-item');
+  const isChecked = checkEl.classList.contains('checked');
+  items.forEach(item => {
+    if(isChecked) item.classList.add('checked');
+    else item.classList.remove('checked');
+  });
+  if(!group.classList.contains('open')) group.classList.add('open');
+}
+
+// ═══════════ VIDEO CAMERA ═══════════
+let dcCurrentCam = '前长';
+let dcVideoAnim = null;
+
+const dcCamColors = {
+  '前长':{bg:'#14202e',road:'rgba(180,190,200,.12)',ceil:'rgba(80,90,100,.15)'},
+  '前广':{bg:'#162030',road:'rgba(170,185,200,.12)',ceil:'rgba(70,85,100,.15)'},
+  '后视':{bg:'#1e1420',road:'rgba(200,140,140,.1)',ceil:'rgba(120,60,80,.12)'},
+  '左前':{bg:'#141e28',road:'rgba(140,180,200,.1)',ceil:'rgba(60,100,140,.1)'},
+  '左后':{bg:'#161a28',road:'rgba(150,170,190,.1)',ceil:'rgba(70,90,120,.1)'},
+  '右前':{bg:'#1a1a28',road:'rgba(160,160,200,.1)',ceil:'rgba(80,80,140,.1)'},
+  '右后':{bg:'#1c1828',road:'rgba(170,155,190,.1)',ceil:'rgba(90,75,130,.1)'},
+  '前环视':{bg:'#142018',road:'rgba(140,200,160,.1)',ceil:'rgba(60,120,80,.1)'},
+  '左环视':{bg:'#14201e',road:'rgba(140,190,180,.1)',ceil:'rgba(60,110,100,.1)'},
+  '后环视':{bg:'#181420',road:'rgba(160,140,200,.1)',ceil:'rgba(80,60,120,.1)'},
+  '右环视':{bg:'#181e20',road:'rgba(155,180,170,.1)',ceil:'rgba(75,100,90,.1)'},
+};
+
+function dcSelectCam(card, name) {
+  document.querySelectorAll('#dcCamList .dc-cam-btn').forEach(c => c.classList.remove('active'));
+  card.classList.add('active');
+  dcCurrentCam = name;
+  document.getElementById('dcCamLabel').textContent = name;
+  dcDrawVideo();
+}
+
+function dcDrawScene(ctx, W, H, cam, t) {
+  const c = dcCamColors[cam] || dcCamColors['前长'];
+  ctx.fillStyle = c.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Ceiling
+  ctx.fillStyle = c.ceil;
+  ctx.fillRect(0, 0, W, H * 0.35);
+  for (let i = 0; i < 8; i++) {
+    const x = (i * W / 7 + t * 20) % (W + 40) - 20;
+    ctx.fillStyle = 'rgba(255,255,255,.03)';
+    ctx.fillRect(x, H * 0.08, 60, 4);
+    ctx.fillRect(x + 10, H * 0.15, 40, 3);
+  }
+
+  // Floor
+  const floorGrad = ctx.createLinearGradient(0, H * 0.5, 0, H);
+  floorGrad.addColorStop(0, 'rgba(60,70,80,.2)');
+  floorGrad.addColorStop(1, 'rgba(40,50,60,.4)');
+  ctx.fillStyle = floorGrad;
+  ctx.fillRect(0, H * 0.5, W, H * 0.5);
+
+  // Vanishing point road
+  const vx = W * 0.5, vy = H * 0.38;
+  const scroll = (t * 40) % 50;
+  ctx.strokeStyle = c.road;
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 12; i++) {
+    const y = vy + (i * 50 + scroll) * 0.8;
+    if (y > H) continue;
+    const spread = (y - vy) / (H - vy);
+    const lx = vx - spread * W * 0.55;
+    const rx = vx + spread * W * 0.55;
+    ctx.globalAlpha = 0.3 + spread * 0.4;
+    ctx.beginPath(); ctx.moveTo(lx, y); ctx.lineTo(rx, y); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // Pillars
+  for (let i = 0; i < 5; i++) {
+    const px = W * 0.1 + i * W * 0.22;
+    ctx.fillStyle = 'rgba(100,110,120,.12)';
+    ctx.fillRect(px, H * 0.1, 12, H * 0.55);
+  }
+
+  // Parked cars silhouettes
+  const carPositions = [
+    {x:0.12,y:0.55,w:50,h:24},{x:0.28,y:0.58,w:55,h:26},{x:0.65,y:0.56,w:48,h:22},
+    {x:0.82,y:0.6,w:52,h:25},{x:0.45,y:0.72,w:60,h:28},
+  ];
+  carPositions.forEach(cp => {
+    const cx = cp.x * W, cy = cp.y * H;
+    ctx.fillStyle = 'rgba(180,185,195,.08)';
+    ctx.beginPath();
+    ctx.roundRect(cx, cy, cp.w, cp.h, 4);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(220,225,235,.06)';
+    ctx.beginPath();
+    ctx.roundRect(cx + 6, cy + 2, cp.w - 12, cp.h * 0.45, 3);
+    ctx.fill();
+  });
+
+  // Noise
+  for (let i = 0; i < 40; i++) {
+    ctx.fillStyle = 'rgba(255,255,255,' + (Math.random() * 0.012) + ')';
+    ctx.fillRect(Math.random() * W, Math.random() * H, 1, 1);
+  }
+}
+
+function dcDrawThumbnails() {
+  document.querySelectorAll('.dc-cam-thumb').forEach(canvas => {
+    const cam = canvas.dataset.cam;
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = 160 * dpr; canvas.height = 80 * dpr;
+    ctx.scale(dpr, dpr);
+    dcDrawScene(ctx, 160, 80, cam, Math.random() * 100);
+  });
+}
+
+function dcDrawVideo() {
+  const canvas = document.getElementById('dcVideoCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+  canvas.style.width = rect.width + 'px'; canvas.style.height = rect.height + 'px';
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+
+  if (dcVideoAnim) cancelAnimationFrame(dcVideoAnim);
+
+  let t = 0;
+  function frame() {
+    t += 0.016;
+    dcDrawScene(ctx, W, H, dcCurrentCam, t);
+    // Scan line
+    const scanY = (t * 60) % H;
+    ctx.fillStyle = 'rgba(100,180,255,0.015)';
+    ctx.fillRect(0, scanY - 1, W, 2);
+    dcVideoAnim = requestAnimationFrame(frame);
+  }
+  frame();
+
+  // Update time
+  const now = new Date();
+  const ts = now.getFullYear() + '/' + String(now.getMonth()+1).padStart(2,'0') + '/' +
+    String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' +
+    String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+  const tel = document.getElementById('dcVideoTime');
+  if (tel) tel.textContent = ts;
+}
+
+// Init video when tab shown
+const origDcSwitchRTab = dcSwitchRTab;
+dcSwitchRTab = function(el, paneId) {
+  el.parentElement.querySelectorAll('.dc-rtab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('#dc-overlay .dc-tab-pane').forEach(p=>p.classList.remove('active'));
+  if(paneId) document.getElementById(paneId).classList.add('active');
+  if(paneId === 'pane-video') { setTimeout(dcDrawVideo, 80); }
+};
+window.addEventListener('resize', function(){
+  if(document.getElementById('pane-video').classList.contains('active')) dcDrawVideo();
+});
+
+// ═══════════ LOG TAB ═══════════
+const dcLogTags = ['落盘日志','HttpServer','NetManager','SensorCtrl','DataSync','TopicMgr'];
+const dcLogMsgs = [
+  '开机获取ip端口为::wlan0',
+  '关闭HTTP服务 ... ip: [10.113.132.51] port:[7352] is alive [false]',
+  'hostIp:10.113.132.51',
+  '数据同步完成，总计 1024 条记录',
+  'Topic订阅成功: /perception/obstacles',
+  '传感器校准数据已更新',
+  '网络连接状态: connected (wlan0)',
+  '磁盘写入速度: 85.2 MB/s',
+  '缓存清理完成，释放 256MB',
+  '采集帧率: 20fps, 丢帧: 0',
+];
+let dcLogData = [];
+let dcLogFilterLevel = 'all';
+let dcLogSearchKw = '';
+let dcLogInterval = null;
+
+function dcGenLog() {
+  const now = new Date();
+  const ts = String(now.getHours()).padStart(2,'0') + ':' +
+    String(now.getMinutes()).padStart(2,'0') + ':' +
+    String(now.getSeconds()).padStart(2,'0') + '.' +
+    String(now.getMilliseconds()).padStart(3,'0');
+  const levels = ['d','d','d','d','d','i','i','w','e'];
+  const lv = levels[Math.floor(Math.random() * levels.length)];
+  const tag = dcLogTags[Math.floor(Math.random() * dcLogTags.length)];
+  const msg = dcLogMsgs[Math.floor(Math.random() * dcLogMsgs.length)];
+  return { ts, lv, tag, msg };
+}
+
+function dcRenderLogs() {
+  const list = document.getElementById('dcLogList');
+  if (!list) return;
+  const filtered = dcLogData.filter(l => {
+    if (dcLogFilterLevel !== 'all' && l.lv !== dcLogFilterLevel) return false;
+    if (dcLogSearchKw && !l.msg.toLowerCase().includes(dcLogSearchKw) && !l.tag.toLowerCase().includes(dcLogSearchKw)) return false;
+    return true;
+  });
+  list.innerHTML = filtered.map(l =>
+    '<div class="dc-log-row lv-' + l.lv + '"><span class="dc-log-time">' + l.ts + '</span>' +
+    '<span class="dc-log-level ' + l.lv + '">' + l.lv.toUpperCase() + '</span>' +
+    '<span class="dc-log-tag">' + l.tag + '</span>' +
+    '<span class="dc-log-msg">' + l.msg + '</span></div>'
+  ).join('');
+  list.scrollTop = list.scrollHeight;
+  const countEl = document.getElementById('dcLogCount');
+  if (countEl) countEl.textContent = filtered.length + ' 条';
+  const timeEl = document.getElementById('dcLogTime');
+  if (timeEl) {
+    const n = new Date();
+    timeEl.textContent = n.toLocaleTimeString('zh-CN');
+  }
+}
+
+function dcLogFilter(btn, level) {
+  btn.parentElement.querySelectorAll('.dc-log-filter').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  dcLogFilterLevel = level;
+  dcRenderLogs();
+}
+function dcLogSearch(kw) { dcLogSearchKw = kw.toLowerCase(); dcRenderLogs(); }
+
+function dcStartLogs() {
+  // seed initial logs
+  for (let i = 0; i < 15; i++) dcLogData.push(dcGenLog());
+  dcRenderLogs();
+  dcLogInterval = setInterval(function() {
+    dcLogData.push(dcGenLog());
+    if (dcLogData.length > 200) dcLogData.shift();
+    dcRenderLogs();
+  }, 1200 + Math.random() * 800);
+}
+function dcStopLogs() { if (dcLogInterval) { clearInterval(dcLogInterval); dcLogInterval = null; } }
+
+// ═══════════ QC TAB ═══════════
+function dcBuildQC() {
+  const qcData = [
+    { time: '01-10-11:19:55', pkg: 'NZP_HW_collect_0110111955', status: 'checking' },
+    { time: '06-11-11:26:38', pkg: 'NZP_HW_collect_0611112638', status: 'checking' },
+    { time: '06-11-11:05:24', pkg: 'NZP_HW_collect_0611110524', status: 'checking' },
+    { time: '06-11-11:04:01', pkg: 'NZP_HW_collect_0611110401', status: 'checking' },
+    { time: '06-11-10:51:33', pkg: 'NZP_HW_collect_0611105133', status: 'issue' },
+    { time: '06-11-10:42:21', pkg: 'NZP_HW_collect_0611104221', status: 'ok' },
+    { time: '01-25-07:12:14', pkg: 'NZP_HW_collect_0125071214', status: 'issue' },
+    { time: '06-11-10:11:03', pkg: 'NZP_HW_collect_0611101103', status: 'issue' },
+    { time: '01-20-20:22:48', pkg: 'NZP_HW_collect_0120202248', status: 'issue' },
+    { time: '01-20-20:21:59', pkg: 'NZP_HW_collect_0120202159', status: 'issue' },
+  ];
+  const labels = { checking: '质检中', ok: '人工判断正常', issue: '人工判断有问题' };
+  const body = document.getElementById('dcQcBody');
+  if (!body) return;
+  body.innerHTML = qcData.map(q =>
+    '<tr>' +
+    '<td><span class="dc-qc-time">' + q.time + '</span></td>' +
+    '<td><span class="dc-qc-pkg">' + q.pkg + '.tar.gz</span></td>' +
+    '<td><span class="dc-qc-badge ' + q.status + '"><span class="qc-dot"></span>' + labels[q.status] + '</span></td>' +
+    '</tr>'
+  ).join('');
+}
+
+// Hook tab switching to start/stop logs
+const _origDcSwitch = dcSwitchRTab;
+dcSwitchRTab = function(el, paneId) {
+  _origDcSwitch(el, paneId);
+  if (paneId === 'pane-log') { dcStartLogs(); }
+  else { dcStopLogs(); }
+  if (paneId === 'pane-qc') { dcBuildQC(); }
+  if (paneId === 'pane-history') { dcBuildHistory(); }
+};
+</script>
+
+
+<!-- ═══════════ Doc Modal (功能说明文档弹窗) ═══════════ -->
+<div class="doc-overlay" id="docOverlay" onclick="if(event.target===this)closeDocModal()">
+  <div class="doc-modal">
+    <div class="doc-modal-header">
+      <span class="doc-modal-title">功能说明文档</span>
+      <button class="doc-modal-close" onclick="closeDocModal()">✕</button>
+    </div>
+    <div class="doc-modal-body">
+      <h3>一、列表管理</h3>
+      <div class="doc-item">
+        <div class="doc-item-title">未下载小包</div>
+        <div class="doc-item-desc">从云端获取并展示所有未下载的小包。</div>
+      </div>
+      <div class="doc-item">
+        <div class="doc-item-title">未安装小包</div>
+        <div class="doc-item-desc">从云端获取并展示已下载但未安装的小包。</div>
+      </div>
+      <div class="doc-item">
+        <div class="doc-item-title">已安装小包</div>
+        <div class="doc-item-desc">从云端获取并展示当前已安装的小包。</div>
+      </div>
+
+      <h3>二、核心操作功能</h3>
+      <div class="doc-item">
+        <div class="doc-item-title">检索</div>
+        <div class="doc-item-desc">输入关键字，对小包列表进行模糊匹配（支持文件名、推送人、描述、大小、类型等字段）。</div>
+      </div>
+      <div class="doc-item">
+        <div class="doc-item-title">刷新</div>
+        <div class="doc-item-desc">重新拉取云端数据，更新当前列表小包。</div>
+      </div>
+      <div class="doc-item">
+        <div class="doc-item-title">下载</div>
+        <div class="doc-item-desc">从云端下载指定小包，保存至SOC中供后续安装。</div>
+      </div>
+      <div class="doc-item">
+        <div class="doc-item-title">安装</div>
+        <div class="doc-item-desc">将已下载的小包安装到车机系统中，安装后生效。</div>
+      </div>
+      <div class="doc-item">
+        <div class="doc-item-title">一键安装</div>
+        <div class="doc-item-desc">自动执行下载+安装流程，适合快速部署场景。</div>
+      </div>
+      <div class="doc-item">
+        <div class="doc-item-title">卸载</div>
+        <div class="doc-item-desc">卸载当前已安装的小包，恢复到安装前状态。</div>
+      </div>
+
+      <h3>三、高级功能</h3>
+      <div class="doc-item">
+        <div class="doc-item-title">还原版本</div>
+        <div class="doc-item-desc">将小包回退到之前的历史版本。</div>
+      </div>
+      <div class="doc-item">
+        <div class="doc-item-title">安装配置</div>
+        <div class="doc-item-desc">配置签名校验、ADPU安装、AVM安装、Switch安装等选项，以及小包备份策略。</div>
+      </div>
+      <div class="doc-item">
+        <div class="doc-item-title">U盘VBF升级</div>
+        <div class="doc-item-desc">通过U盘加载VBF文件进行固件升级。</div>
+      </div>
+    </div>
+    <div class="doc-modal-footer">
+      <button class="doc-ok-btn" onclick="closeDocModal()">知道了</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openDocModal() {
+  document.getElementById('docOverlay').classList.add('active');
+}
+function closeDocModal() {
+  document.getElementById('docOverlay').classList.remove('active');
+}
+</script>
+
+
+</div><!-- /container -->
+  </div><!-- /tablet-frame -->
+</div><!-- /tablet-bg -->
+
+<!-- ═══════════ Comfort Modal — 在所有容器外部 ═══════════ -->
+<div class="cmf-overlay" id="cmf-overlay">
+  <div class="cmf-modal">
+    <div class="cmf-header">
+      <div class="cmf-header-left"><span class="cmf-header-title">咖啡还剩 <span class="cmf-pct">90</span>%</span></div>
+      <button class="cmf-header-close" onclick="closeComfortModal()">✕</button>
+    </div>
+    <div class="cmf-body">
+      <div class="cmf-coffee" id="cmfCoffee"><svg viewBox="0 0 220 190" fill="none">
+        <defs>
+          <clipPath id="cupClip"><path d="M60 40 L60 140 Q60 152 110 152 Q160 152 160 140 L160 40 Z"/></clipPath>
+          <linearGradient id="cupGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#5C5872"/><stop offset="50%" stop-color="#4A475E" stop-opacity=".6"/><stop offset="100%" stop-color="#3D3A50"/></linearGradient>
+          <linearGradient id="coffeeGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#8B5E3C"/><stop offset="40%" stop-color="#6D4527"/><stop offset="100%" stop-color="#5C3A20"/></linearGradient>
+          <radialGradient id="saucerGrad" cx="50%" cy="50%"><stop offset="0%" stop-color="#4A475E"/><stop offset="100%" stop-color="#2E2B3D" stop-opacity=".7"/></radialGradient>
+        </defs>
+        <!-- Steam -->
+        <line class="cmf-steam" x1="100" y1="28" x2="98" y2="6" stroke="#3D3A50" stroke-width="3" stroke-linecap="round"/>
+        <line class="cmf-steam" x1="110" y1="26" x2="110" y2="4" stroke="#3D3A50" stroke-width="3" stroke-linecap="round"/>
+        <line class="cmf-steam" x1="120" y1="28" x2="122" y2="6" stroke="#3D3A50" stroke-width="3" stroke-linecap="round"/>
+        <!-- Saucer -->
+        <ellipse cx="110" cy="158" rx="72" ry="14" fill="#2E2B3D"/>
+        <!-- Cup body -->
+        <path d="M60 40 L60 140 Q60 152 110 152 Q160 152 160 140 L160 40 Z" fill="url(#cupGrad)" opacity=".85"/>
+        <!-- Coffee liquid (dynamic, clipped to cup shape) -->
+        <rect id="cmfCoffeeLevel" x="58" y="42" width="104" height="112" fill="url(#coffeeGrad)" clip-path="url(#cupClip)"/>
+        <!-- Coffee wave surface animation -->
+        <g clip-path="url(#cupClip)">
+          <path id="cmfWave" d="M50 90 Q70 85 90 90 T130 90 T170 90 L170 94 Q150 99 130 94 T90 94 T50 94 Z" fill="#A06B3A" opacity=".45">
+            <animate attributeName="d" dur="2.5s" repeatCount="indefinite" values="
+              M50 90 Q70 85 90 90 T130 90 T170 90 L170 95 Q150 100 130 95 T90 95 T50 95 Z;
+              M50 90 Q70 95 90 90 T130 90 T170 90 L170 95 Q150 90 130 95 T90 95 T50 95 Z;
+              M50 90 Q70 85 90 90 T130 90 T170 90 L170 95 Q150 100 130 95 T90 95 T50 95 Z"/>
+          </path>
+        </g>
+        <!-- Cup rim highlight -->
+        <ellipse cx="110" cy="40" rx="50" ry="7" fill="#5C5872" opacity=".5"/>
+        <ellipse cx="110" cy="40" rx="46" ry="5" fill="#2E2B3D" opacity=".6"/>
+        <!-- Handle -->
+        <path d="M160 65 C182 65 187 85 187 95 C187 108 180 118 160 118" stroke="#4A475E" stroke-width="7" fill="none" stroke-linecap="round"/>
+      </svg></div>
+      <div class="cmf-card">
+        <div class="cmf-card-header"><span class="cmf-card-title">行程舒适分布</span><span class="cmf-card-value">行程<span style="color:var(--text-primary)">12:00</span></span></div>
+        <div class="cmf-bar"><div class="cmf-bar-seg s-good" style="width:50%"></div><div class="cmf-bar-seg s-warn" style="width:25%"></div><div class="cmf-bar-seg s-mild" style="width:17%"></div><div class="cmf-bar-seg s-bad" style="width:8%"></div></div>
+        <div class="cmf-legend"><span class="cmf-legend-item"><span class="cmf-legend-dot good"></span>优 91%</span><span class="cmf-legend-item"><span class="cmf-legend-dot warn"></span>临界 91%</span><span class="cmf-legend-item"><span class="cmf-legend-dot mild"></span>轻度 91%</span><span class="cmf-legend-item"><span class="cmf-legend-dot bad"></span>不适 91%</span></div>
+      </div>
+      <div class="cmf-card">
+        <div class="cmf-card-header"><span class="cmf-card-title">纵向舒适度</span><span class="cmf-card-value">0.95<span class="cmf-unit">G</span></span></div>
+        <div class="cmf-chart-wrap"><canvas id="cmfChartLon"></canvas></div>
+        <div class="cmf-card-header" style="margin-top:12px"><span class="cmf-card-title">横向舒适度</span><span class="cmf-card-value">0.00<span class="cmf-unit">G</span></span></div>
+        <div class="cmf-chart-wrap"><canvas id="cmfChartLat"></canvas></div>
+      </div>
+      <div class="cmf-card cmf-card-stats">
+        <div class="cmf-stats">
+          <div class="cmf-stat"><div class="cmf-stat-label">实时速度</div><div class="cmf-stat-val">100<span class="cmf-stat-unit">km/h</span></div></div>
+          <div class="cmf-stat"><div class="cmf-stat-label">行驶里程</div><div class="cmf-stat-val">100<span class="cmf-stat-unit">km</span></div></div>
+          <div class="cmf-stat"><div class="cmf-stat-label">不良体验</div><div class="cmf-stat-val" style="color:var(--orange)">6</div></div>
+        </div>
+      </div>
+      <div class="cmf-events-section">
+        <div class="cmf-events-header"><span class="cmf-events-title">不良体验事件</span><span class="cmf-events-count">6 条记录</span></div>
+        <div class="cmf-event-row"><span class="cmf-event-time">14:01:02</span><div class="cmf-event-bar lv-bad"></div><div class="cmf-event-info"><div class="cmf-event-level lv-bad">中度不适</div><div class="cmf-event-desc">纵向RMS 0.83m/s</div></div><div class="cmf-event-score">0.5</div></div>
+        <div class="cmf-event-row"><span class="cmf-event-time">14:01:02</span><div class="cmf-event-bar lv-good"></div><div class="cmf-event-info"><div class="cmf-event-level lv-good">舒适</div><div class="cmf-event-desc">纵向RMS 0.83m/s</div></div><div class="cmf-event-score">0.5</div></div>
+        <div class="cmf-event-row"><span class="cmf-event-time">14:01:02</span><div class="cmf-event-bar lv-mild"></div><div class="cmf-event-info"><div class="cmf-event-level lv-mild">轻微不适</div><div class="cmf-event-desc">纵向RMS 0.83m/s</div></div><div class="cmf-event-score">0.7</div></div>
+        <div class="cmf-event-row"><span class="cmf-event-time">14:02:15</span><div class="cmf-event-bar lv-bad"></div><div class="cmf-event-info"><div class="cmf-event-level lv-bad">中度不适</div><div class="cmf-event-desc">横向RMS 1.02m/s</div></div><div class="cmf-event-score">0.4</div></div>
+        <div class="cmf-event-row"><span class="cmf-event-time">14:03:30</span><div class="cmf-event-bar lv-good"></div><div class="cmf-event-info"><div class="cmf-event-level lv-good">舒适</div><div class="cmf-event-desc">纵向RMS 0.21m/s</div></div><div class="cmf-event-score">0.9</div></div>
+        <div class="cmf-event-row"><span class="cmf-event-time">14:04:48</span><div class="cmf-event-bar lv-mild"></div><div class="cmf-event-info"><div class="cmf-event-level lv-mild">轻微不适</div><div class="cmf-event-desc">横向RMS 0.55m/s</div></div><div class="cmf-event-score">0.6</div></div>
+        <div class="cmf-more">▾ 查看更多</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function openComfortModal(){document.getElementById('cmf-overlay').classList.add('active');setCoffeeLevel(90);requestAnimationFrame(function(){drawCmfChart('cmfChartLon',generateCmfData(0.7,0.95),'#FF9800',[0.5,1.0]);drawCmfChart('cmfChartLat',generateCmfData(0.2,0.45),'#00C853',[0.5,1.0])});}
+// 设置咖啡液面：根据百分比映射到 SVG 中的 rect y/height
+// 档位: 100%, 90-99%, 80-90%, 70-80%, 60-70%, 45-60%, 30-45%, 15-30%, 1-15%, 0%
+function setCoffeeLevel(pct){
+  var el=document.getElementById('cmfCoffeeLevel');
+  var wave=document.getElementById('cmfWave');
+  var title=document.querySelector('.cmf-header-title .cmf-pct');
+  if(!el)return;
+  // 杯体: 液面区域 y=42 到 y=152, 总高110
+  var cupTop=42,cupH=110;
+  var ratio=Math.max(0,Math.min(100,pct))/100;
+  var fillH=Math.round(cupH*ratio);
+  var fillY=cupTop+cupH-fillH;
+  el.setAttribute('y',fillY);
+  el.setAttribute('height',fillH);
+  if(wave){
+    var wy=fillY;
+    var wy2=wy+5;
+    var v1='M50 '+wy+' Q70 '+(wy-5)+' 90 '+wy+' T130 '+wy+' T170 '+wy+' L170 '+wy2+' Q150 '+(wy2+5)+' 130 '+wy2+' T90 '+wy2+' T50 '+wy2+' Z';
+    var v2='M50 '+wy+' Q70 '+(wy+5)+' 90 '+wy+' T130 '+wy+' T170 '+wy+' L170 '+wy2+' Q150 '+(wy2-5)+' 130 '+wy2+' T90 '+wy2+' T50 '+wy2+' Z';
+    wave.setAttribute('d',v1);
+    var anim=wave.querySelector('animate');
+    if(anim)anim.setAttribute('values',v1+';'+v2+';'+v1);
+  }
+  if(title)title.textContent=pct;
+}
+function closeComfortModal(){document.getElementById('cmf-overlay').classList.remove('active');}
+document.getElementById('cmf-overlay').addEventListener('click',function(e){if(e.target===this)closeComfortModal();});
+function generateCmfData(b,p){var a=[];for(var i=0;i<60;i++){var v=b+(Math.random()-0.5)*0.15;if(i>40&&i<50)v=p+(Math.random()-0.5)*0.1;a.push(Math.max(0,Math.min(1.2,v)));}return a;}
+function drawCmfChart(id,data,color,th){var c=document.getElementById(id);if(!c)return;var wr=c.parentElement,w=wr.clientWidth,h=wr.clientHeight||80,d=window.devicePixelRatio||1;c.width=w*d;c.height=h*d;var x=c.getContext('2d');x.scale(d,d);var mx=1.2,pL=28,pR=4,pT=4,pB=14,cw=w-pL-pR,ch=h-pT-pB;x.clearRect(0,0,w,h);x.font='10px monospace';x.fillStyle='#6E7681';x.textAlign='right';[1.0,0.5,0.0].forEach(function(v){var y=pT+ch-(v/mx)*ch;x.fillText(v.toFixed(1),pL-4,y+3);x.setLineDash([4,4]);x.strokeStyle='rgba(255,255,255,.08)';x.lineWidth=1;x.beginPath();x.moveTo(pL,y);x.lineTo(w-pR,y);x.stroke();});th.forEach(function(v){var y=pT+ch-(v/mx)*ch;x.setLineDash([6,4]);x.strokeStyle=v>=1.0?'rgba(255,82,82,.5)':'rgba(255,179,0,.5)';x.lineWidth=1;x.beginPath();x.moveTo(pL,y);x.lineTo(w-pR,y);x.stroke();});x.setLineDash([]);x.strokeStyle=color;x.lineWidth=2;x.lineJoin='round';x.beginPath();data.forEach(function(v,i){var px=pL+(i/(data.length-1))*cw,py=pT+ch-(v/mx)*ch;if(i===0)x.moveTo(px,py);else x.lineTo(px,py);});x.stroke();var g=x.createLinearGradient(0,pT,0,h);g.addColorStop(0,color+'30');g.addColorStop(1,color+'00');x.lineTo(pL+cw,pT+ch);x.lineTo(pL,pT+ch);x.closePath();x.fillStyle=g;x.fill();}
+</script>
+
+</body>
+</html>

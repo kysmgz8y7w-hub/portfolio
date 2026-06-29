@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>手势泊车</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{--bg:#0A0D14;--card:#161B22;--border:#30363D;--text:#E6EDF3;--text-sec:#8B949E;--text-dim:#6E7681;--accent:#448AFF;--radius:12px}
+  body{min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,'PingFang SC','SF Pro Display',sans-serif;display:flex;justify-content:center;-webkit-font-smoothing:antialiased}
+  .panel{width:680px;max-width:100vw;padding:24px 28px 40px;position:relative}
+  .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px}
+  .header h1{font-size:22px;font-weight:700}
+  .close-btn{width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text-sec);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s}
+  .close-btn:hover{background:#FF5252;color:#fff;border-color:#FF5252}
+  .section{margin-bottom:28px}
+  .section h2{font-size:16px;font-weight:700;margin-bottom:10px;padding-left:12px;border-left:3px solid var(--accent);line-height:1}
+  .section p{font-size:14px;color:var(--text-sec);line-height:1.9;margin-bottom:14px}
+  .img-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+  .img-row.three .img-card{flex:1;min-width:0}
+  .img-row.six .img-card{width:calc(33.33% - 8px)}
+  .img-card{border-radius:var(--radius);overflow:hidden;background:var(--card);border:1px solid var(--border);transition:transform .2s}
+  .img-card:hover{transform:translateY(-3px)}
+  .img-card img{width:100%;height:auto;display:block}
+  .img-card .caption{font-size:11px;color:var(--text-dim);padding:8px 10px;line-height:1.5;text-align:center}
+  .note{font-size:13px;color:var(--text-dim);line-height:1.8;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius)}
+  .note strong{color:var(--text-sec);font-weight:600}
+</style>
+</head>
+<body>
+<div class="panel">
+  <div class="header">
+    <h1>隔空手势召唤说明</h1>
+    <button class="close-btn" onclick="window.close();if(!window.closed)location.href='index.html'">&times;</button>
+  </div>
+
+  <div class="section">
+    <h2>使用步骤</h2>
+    <p>请您携带物理钥匙解锁车辆并站在6m内，当车位姿满足遥控泊出场景，功能可激活，车外语音会播报可激活通知，您可以做出下面的激活手势将其激活并指令车辆泊出。</p>
+  </div>
+
+  <div class="section">
+    <h2>激活手势</h2>
+    <p>听到语音提示后，请您站在车头正前方或车尾正后方，面向车辆，双手手臂在头顶上持续挥动3s以上（如下图），即可激活隔空手势召唤功能，此时双闪灯会被点亮。</p>
+    <div class="img-row three">
+      <div class="img-card"><img src="gesture/1.jpg" alt="站立姿势"></div>
+      <div class="img-card"><img src="gesture/2.jpg" alt="举手激活"></div>
+      <div class="img-card"><img src="gesture/3.jpg" alt="激活确认"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>选择泊出方向</h2>
+    <p>双闪灯点亮后，请您继续做出以下方向手势之一并持续3s以上（如下图），成功选择泊出方向后，车辆即可按照手势指令泊出。</p>
+    <div class="img-row six">
+      <div class="img-card"><img src="gesture/2-1.png" alt="方向1"><div class="caption">面向车辆站在车头正前方，右手臂在右侧上下挥动执行车头向左前泊出；</div></div>
+      <div class="img-card"><img src="gesture/2-2.png" alt="方向2"><div class="caption">面向车辆站在车尾正后方，右手臂在右侧上下挥动执行车头向右后泊出；</div></div>
+      <div class="img-card"><img src="gesture/2-3.png" alt="方向3"><div class="caption">面向车辆站在车头正前方，左手臂在左侧上下挥动执行车头向右前泊出；</div></div>
+      <div class="img-card"><img src="gesture/2-4.jpg" alt="方向4"><div class="caption">面向车辆站在车尾正前方，左手臂在左侧上下挥动执行车头向左后泊出；</div></div>
+      <div class="img-card"><img src="gesture/2-5.jpg" alt="方向5"><div class="caption">面向车辆站在车头正前方，双手手臂在身前上下挥动执行车头向前泊出；</div></div>
+      <div class="img-card"><img src="gesture/2-6.jpg" alt="方向6"><div class="caption">面向车辆站在车尾正前方，双手手臂在身前上下挥动执行车头向前泊出；</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>功能中断及恢复</h2>
+    <div class="note">
+      <strong>方式一：</strong>按下智能钥匙解锁键/闭锁键中断泊车，再次按下智能钥匙解锁键/闭锁键恢复泊车。<br>
+      <strong>方式二：</strong>打开车门中断泊车，关好车门恢复泊车。<br>
+      <strong>方式三：</strong>点击手机APP爱车首页"遥控泊车"功能按钮中断/恢复泊车。<br><br>
+      <span style="color:var(--text-dim);font-size:12px;">更多中断/恢复泊车方式详见用户手册</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工程模式 - 辅助驾驶校准</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#F5F5F5;--card:#fff;--border:#E8E8E8;--border-light:#F0F0F0;--accent:#FF8C00;--accent-bg:rgba(255,140,0,0.08);--text:#1A1A1A;--text-sec:#666;--text-dim:#999;--radius:12px;--radius-sm:8px;--checkbox-bg:#FAFAFA;--sidebar-hover:rgba(0,0,0,0.02);--btn-start-bg:#1A1A1A;--btn-start-color:#fff}
+[data-theme="dark"]{--bg:#0A0D14;--card:#111620;--border:#2A2F3A;--border-light:#1E2330;--accent:#FF8C00;--accent-bg:rgba(255,140,0,0.12);--text:#E6EDF3;--text-sec:#8B949E;--text-dim:#6E7681;--checkbox-bg:#1A1F2B;--sidebar-hover:rgba(255,255,255,0.03);--btn-start-bg:#FF8C00;--btn-start-color:#fff}
+body{min-height:100vh;background:var(--bg);font-family:-apple-system,'PingFang SC',sans-serif;color:var(--text);font-size:14px;display:flex;align-items:center;justify-content:center}
+.viewport{width:1024px;margin:0 auto;background:var(--card);display:flex;flex-direction:column;box-shadow:0 0 40px rgba(0,0,0,0.08)}
+
+/* Status Bar */
+.status-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 20px;background:#fff;border-bottom:1px solid var(--border-light);font-size:12px;color:var(--text-sec)}
+.status-bar .left{display:flex;align-items:center;gap:12px;font-weight:600;color:var(--text)}
+.status-bar .left .gear{color:var(--accent);font-weight:700}
+.status-bar .center{display:flex;align-items:center;gap:8px}
+.status-bar .right{display:flex;align-items:center;gap:10px}
+.status-bar .icon{width:18px;height:18px;opacity:0.5}
+
+/* Header */
+.header{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--border)}
+.btn-back{width:32px;height:32px;border:none;background:none;font-size:22px;color:var(--text-sec);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.header-title{font-size:17px;font-weight:700;flex:1}
+.header-info{font-size:11px;color:var(--text-dim);text-align:right;line-height:1.6}
+.theme-toggle{width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--checkbox-bg);color:var(--text-sec);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Main Content */
+.main{display:flex;overflow:hidden}
+
+/* Left Sidebar - Sensor Categories */
+.sidebar{width:180px;border-right:1px solid var(--border);padding:16px 0;display:flex;flex-direction:column;gap:4px}
+.sensor-tab{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;transition:all 0.15s;border-left:3px solid transparent;font-size:13px;font-weight:500;color:var(--text-sec)}
+.sensor-tab:hover{background:var(--sidebar-hover)}
+.sensor-tab.active{background:var(--accent-bg);border-left-color:var(--accent);color:var(--accent);font-weight:600}
+.sensor-tab .tab-icon{width:36px;height:36px;border-radius:var(--radius-sm);background:var(--checkbox-bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sensor-tab .tab-icon svg{width:22px;height:22px}
+.sensor-tab.active .tab-icon{background:var(--accent-bg);border-color:rgba(255,140,0,0.2)}
+
+/* Center - Sensor Options */
+.center{flex:1;padding:20px;overflow-y:auto;border-right:1px solid var(--border);max-width:calc(100% - 180px - 340px)}
+.checkbox-group{display:flex;flex-direction:column;gap:10px}
+.checkbox-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--checkbox-bg);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s}
+.checkbox-item:hover{border-color:#ccc}
+.checkbox-item.checked{border-color:var(--accent);background:var(--accent-bg)}
+.checkbox-box{width:18px;height:18px;border-radius:4px;border:2px solid #ccc;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s}
+.checkbox-item.checked .checkbox-box{background:var(--accent);border-color:var(--accent)}
+.checkbox-item.checked .checkbox-box::after{content:'✓';color:#fff;font-size:12px;font-weight:700}
+.checkbox-label{font-size:13px;color:var(--text)}
+.checkbox-item.disabled{opacity:0.4;pointer-events:none}
+.checkbox-item.disabled .checkbox-label{color:var(--text-dim)}
+
+/* Right - Selected Sensors */
+.right-panel{width:340px;padding:16px;overflow-y:auto;display:flex;flex-direction:column}
+.panel-title{font-size:13px;font-weight:600;color:var(--text-sec);margin-bottom:12px}
+.selected-list{display:flex;flex-direction:column;gap:6px;margin-bottom:20px;height:276px;overflow-y:auto}
+.selected-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--checkbox-bg);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;color:var(--text)}
+.selected-item .remove{width:22px;height:22px;border-radius:50%;border:none;background:var(--border);color:var(--text-dim);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.selected-item .remove:hover{background:var(--accent);color:#fff}
+
+/* Bottom Info */
+.bottom-section{border-top:1px solid var(--border);padding:20px;display:flex;gap:24px}
+.info-col{flex:1}
+.info-col h3{font-size:14px;font-weight:700;margin-bottom:10px}
+.info-col p,.info-col li{font-size:12px;color:var(--text-sec);line-height:1.9}
+.info-col ol{padding-left:16px}
+
+/* Start Button */
+.btn-start{width:180px;padding:14px;border-radius:var(--radius);border:none;background:var(--btn-start-bg);color:var(--btn-start-color);font-size:15px;font-weight:700;cursor:pointer;margin-top:16px;transition:all 0.15s}
+.btn-start:hover{opacity:0.85}
+.btn-start:active{transform:scale(0.97)}
+
+/* Bottom Bar */
+.bottom-bar{display:flex;align-items:center;justify-content:center;gap:20px;padding:10px 20px;border-top:1px solid var(--border);background:#fff}
+.bar-icon{width:28px;height:28px;display:flex;align-items:center;justify-content:center;opacity:0.4}
+.bar-icon svg{width:20px;height:20px;fill:#333}
+.bar-text{font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:4px}
+
+@media(max-width:1024px){.viewport{width:100%}}
+</style>
+</head>
+<body>
+<div class="viewport">
+  <!-- Header -->
+  <div class="header">
+    <button class="btn-back" onclick="window.close();if(!window.closed)history.back()">‹</button>
+    <span class="header-title">辅助驾驶校准</span>
+    <div class="header-info">型号：12V5R3L &nbsp; 版本号：V100R001C00B112_S278_2022122811I852</div>
+    <button class="theme-toggle" id="themeBtn" onclick="toggleTheme()" title="切换到白天模式">☾</button>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <div class="sensor-tab active" onclick="switchTab(this,'camera')">
+        <div class="tab-icon"><svg viewBox="0 0 48 48" fill="none"><path d="M16 6H8C6.895 6 6 6.895 6 8V16" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 42H8C6.895 42 6 41.105 6 40V32" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M32 42H40C41.105 42 42 41.105 42 40V32" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M32 6H40C41.105 6 42 6.895 42 8V16" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 12.5C30.351 12.5 35.5 17.649 35.5 24C35.5 30.351 30.351 35.5 24 35.5C17.649 35.5 12.5 30.351 12.5 24C12.5 17.649 17.649 12.5 24 12.5ZM24 21C22.343 21 21 22.343 21 24C21 25.657 22.343 27 24 27C25.657 27 27 25.657 27 24C27 22.343 25.657 21 24 21Z" fill="currentColor"/></svg></div>摄像头
+      </div>
+      <div class="sensor-tab" onclick="switchTab(this,'lidar')">
+        <div class="tab-icon"><svg viewBox="0 0 48 48" fill="none"><g clip-path="url(#lc)"><path d="M23.4 0C26.596 0 29.643 0.642 32.419 1.802C33.455 2.234 33.743 3.527 33.07 4.425C32.542 5.129 31.591 5.349 30.774 5.021C27.412 3.672 23.734 3.268 20.141 3.868C16.048 4.551 12.273 6.503 9.349 9.448C6.426 12.393 4.502 16.182 3.848 20.28C3.195 24.378 3.845 28.578 5.708 32.286C7.571 35.994 10.552 39.023 14.23 40.945C17.907 42.867 22.096 43.585 26.204 42.998C30.312 42.411 34.131 40.547 37.123 37.672C39.748 35.149 41.619 31.958 42.544 28.457C42.769 27.604 43.517 26.971 44.399 26.971C45.518 26.971 46.379 27.971 46.109 29.057C43.582 39.247 34.375 46.8 23.4 46.8C10.476 46.8 0 36.324 0 23.4C0 10.476 10.476 0 23.4 0Z" fill="currentColor"/><path d="M46.805 23.372C46.805 15.504 43.332 8.818 37.666 4.289L23.4 23.369H46.805V23.372Z" fill="currentColor"/><path d="M18.6 22.851C18.6 24.124 19.106 25.345 20.006 26.245C20.906 27.145 22.127 27.651 23.4 27.651C24.673 27.651 25.894 27.145 26.794 26.245C27.694 25.345 28.2 24.124 28.2 22.851C28.2 21.578 27.694 20.357 26.794 19.457C25.894 18.557 24.673 18.051 23.4 18.051C22.127 18.051 20.906 18.557 20.006 19.457C19.106 20.357 18.6 21.578 18.6 22.851Z" fill="currentColor"/></g><defs><clipPath id="lc"><rect width="48" height="48" fill="white"/></clipPath></defs></svg></div>激光雷达
+      </div>
+      <div class="sensor-tab" onclick="switchTab(this,'imu')">
+        <div class="tab-icon"><svg viewBox="0 0 48 48" fill="none"><path d="M28 8L24 4L20 8M24 4V16" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M28 40L24 44L20 40M24 44V32" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M40 28L44 24L40 20M44 24H32" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 28L4 24L8 20M4 24H16" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 29.5C27.038 29.5 29.5 27.038 29.5 24C29.5 20.962 27.038 18.5 24 18.5C20.962 18.5 18.5 20.962 18.5 24C18.5 27.038 20.962 29.5 24 29.5Z" fill="currentColor"/></svg></div>IMU
+      </div>
+      <div class="sensor-tab" onclick="switchTab(this,'radar')">
+        <div class="tab-icon"><svg viewBox="0 0 48 48" fill="none"><path d="M24 28.629C26.511 28.629 28.546 26.6 28.546 24.098C28.546 21.595 26.511 19.566 24 19.566C21.49 19.566 19.455 21.595 19.455 24.098C19.455 26.6 21.49 28.629 24 28.629Z" fill="currentColor" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M16 15C10.667 19.971 10.667 28.029 16 33" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M32 33C37.333 28.029 37.333 19.971 32 15" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.858 10C2.047 17.786 2.047 30.41 9.858 38.196" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M38.143 38.196C45.953 30.41 45.953 17.786 38.143 10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>毫米波雷达
+      </div>
+    </div>
+
+    <!-- Center -->
+    <div class="center" id="centerContent"></div>
+
+    <!-- Right -->
+    <div class="right-panel">
+      <div class="panel-title">已选择的传感器</div>
+      <div class="selected-list" id="selectedList"></div>
+    </div>
+  </div>
+
+  <!-- Bottom Info -->
+  <div class="bottom-section" id="bottomInfo">
+    <div class="info-col" id="infoLeft"></div>
+    <div class="info-col" id="infoRight"></div>
+  </div>
+
+</div>
+
+<script>
+var sensorData = {
+  camera: {
+    options: [
+      {id:'c1',label:'前广角、前长焦、左侧前、右侧前摄像头',checked:false},
+      {id:'c2',label:'后视、左侧后、右侧后摄像头',checked:false},
+      {id:'c3',label:'360环视摄像头',checked:false},
+      {id:'c4',label:'红外摄像头静态校准',checked:false},
+      {id:'c5',label:'红外摄像头动态',checked:false},
+      {id:'c6',label:'备前视摄像头',checked:false}
+    ]
+  },
+  lidar: {
+    options: [
+      {id:'l1',label:'前短距激光雷达校准',checked:false},
+      {id:'l2',label:'右短距激光雷达校准',checked:false},
+      {id:'l3',label:'左短距激光雷达校准',checked:false},
+      {id:'l4',label:'后短距激光雷达校准',checked:false}
+    ]
+  },
+  imu: {
+    options: [
+      {id:'i1',label:'IMU静态',checked:false},
+      {id:'i2',label:'IMU动态',checked:false},
+      {id:'i3',label:'备IMU静态',checked:false},
+      {id:'i4',label:'备IMU动态',checked:false}
+    ]
+  },
+  radar: {
+    options: [
+      {id:'r1',label:'前毫米波雷达',checked:false},
+      {id:'r2',label:'左前毫米波雷达',checked:false},
+      {id:'r3',label:'右前毫米波雷达',checked:false},
+      {id:'r4',label:'左后毫米波雷达',checked:false},
+      {id:'r5',label:'右后毫米波雷达',checked:false}
+    ]
+  }
+};
+
+var currentTab = 'camera';
+
+var bottomTexts = {
+  camera: {
+    condition: '<h3>前提条件</h3><p>1. 售后维修过程中，对传感器、传感器周边件进行了更换新件或将原零件复原等拆装操作后，需要进行传感器校准；</p><p>2. 售后维修过程中，对域控制器进行了更换新件等操作，需要进行传感器校准。</p><button class="btn-start" onclick="alert(\'开始校准\')">开始校准</button>',
+    notice: '<h3>校准须知</h3><ol><li>请在P档下点击开始校准，然后挂D档按引导行驶，建议车速30～60km/h；</li><li>校准期间，辅助驾驶功能暂不可用，车辆下电或进入超级省电等模式会退出校准；</li><li>需要人员1人，经过专业培训，且具有驾驶经验。</li></ol>'
+  },
+  lidar: {
+    condition: '<h3>前提条件</h3><p>1. 售后维修过程中，对传感器、传感器周边件进行了更换新件或将原零件复原等拆装操作后，需要进行传感器校准；</p><p>2. 售后维修过程中，对域控制器进行了更换新件等操作，需要进行传感器校准。</p><button class="btn-start" onclick="alert(\'开始校准\')">开始校准</button>',
+    notice: '<h3>校准须知</h3><ol><li>请在P档下点击开始校准，然后挂D档按引导行驶，建议车速30～60km/h；</li><li>校准期间，辅助驾驶功能暂不可用，车辆下电或进入超级省电等模式会退出校准；</li><li>需要人员1人，经过专业培训，且具有驾驶经验。</li></ol>'
+  },
+  imu: {
+    condition: '<h3>前提条件</h3><p>售后维修过程中，对与智驾域控制器进行了更换新件或将智驾域控制器进行了拆装等操作，需要进行IMU静态校准。</p><button class="btn-start" onclick="alert(\'开始校准\')">开始校准</button>',
+    notice: '<h3>校准须知</h3><ol><li>执行IMU动态校准前，需先完成IMU静态校准；</li><li>校准开始前，需确保车辆处于静止状态；</li><li>校准期间，辅助驾驶功能暂不可用，车辆下电或进入超级省电等模式会退出校准；</li><li>需要人员1人，经过专业培训，且具有驾驶经验。</li></ol>'
+  },
+  radar: {
+    condition: '<h3>前提条件</h3><p>售后维修过程中，与毫米波雷达进行了更换新件或毫米波雷达进行了拆装等操作后，需要进行毫米波雷达动态校准。</p><button class="btn-start" onclick="alert(\'开始校准\')">开始校准</button>',
+    notice: '<h3>校准须知</h3><ol><li>校准开始前，需确保车辆处于标准标靶位（仅适用于最新版高配可调标靶的车型）；</li><li>请在P档下点击开始校准，然后挂D档行驶，建议车速大于10km/h；</li><li>需要人员1人，经过专业培训，且具有驾驶经验。</li></ol>'
+  }
+};
+
+function renderBottom() {
+  var t = bottomTexts[currentTab];
+  document.getElementById('infoLeft').innerHTML = t.condition;
+  document.getElementById('infoRight').innerHTML = t.notice;
+}
+
+function switchTab(el, tab) {
+  document.querySelectorAll('.sensor-tab').forEach(function(t){t.classList.remove('active')});
+  el.classList.add('active');
+  currentTab = tab;
+  renderCenter();
+  renderSelected();
+  renderBottom();
+}
+
+function toggleOption(id) {
+  var opts = sensorData[currentTab].options;
+  for (var i = 0; i < opts.length; i++) {
+    if (opts[i].id === id) { opts[i].checked = !opts[i].checked; break; }
+  }
+  if (currentTab === 'imu') {
+    var staticIds = ['i1','i3'], dynamicIds = ['i2','i4'];
+    var anyStaticChecked = false, anyDynamicChecked = false;
+    for (var i = 0; i < opts.length; i++) {
+      if (staticIds.indexOf(opts[i].id) >= 0 && opts[i].checked) anyStaticChecked = true;
+      if (dynamicIds.indexOf(opts[i].id) >= 0 && opts[i].checked) anyDynamicChecked = true;
+    }
+    if (anyStaticChecked && staticIds.indexOf(id) >= 0) {
+      for (var i = 0; i < opts.length; i++) { if (dynamicIds.indexOf(opts[i].id) >= 0) opts[i].checked = false; }
+    }
+    if (anyDynamicChecked && dynamicIds.indexOf(id) >= 0) {
+      for (var i = 0; i < opts.length; i++) { if (staticIds.indexOf(opts[i].id) >= 0) opts[i].checked = false; }
+    }
+  }
+  renderCenter();
+  renderSelected();
+}
+
+function removeSelected(tabKey, id) {
+  var opts = sensorData[tabKey].options;
+  for (var i = 0; i < opts.length; i++) {
+    if (opts[i].id === id) { opts[i].checked = false; break; }
+  }
+  renderCenter();
+  renderSelected();
+}
+
+function renderCenter() {
+  var opts = sensorData[currentTab].options;
+  var staticChecked = false, dynamicChecked = false;
+  if (currentTab === 'imu') {
+    var staticIds = ['i1','i3'], dynamicIds = ['i2','i4'];
+    for (var i = 0; i < opts.length; i++) {
+      if (staticIds.indexOf(opts[i].id) >= 0 && opts[i].checked) staticChecked = true;
+      if (dynamicIds.indexOf(opts[i].id) >= 0 && opts[i].checked) dynamicChecked = true;
+    }
+  }
+  var html = '<div class="checkbox-group">';
+  for (var i = 0; i < opts.length; i++) {
+    var o = opts[i];
+    var disabled = false;
+    if (currentTab === 'imu') {
+      var sIds = ['i1','i3'], dIds = ['i2','i4'];
+      if (sIds.indexOf(o.id) >= 0 && dynamicChecked) disabled = true;
+      if (dIds.indexOf(o.id) >= 0 && staticChecked) disabled = true;
+    }
+    html += '<div class="checkbox-item' + (o.checked ? ' checked' : '') + (disabled ? ' disabled' : '') + '" onclick="toggleOption(\'' + o.id + '\')">';
+    html += '<div class="checkbox-box"></div>';
+    html += '<span class="checkbox-label">' + o.label + '</span>';
+    html += '</div>';
+  }
+  html += '</div>';
+  document.getElementById('centerContent').innerHTML = html;
+}
+
+function renderSelected() {
+  var html = '';
+  var tabNames = {camera:'摄像头',lidar:'激光雷达',imu:'IMU',radar:'毫米波雷达'};
+  var keys = ['camera','lidar','imu','radar'];
+  for (var k = 0; k < keys.length; k++) {
+    var key = keys[k];
+    var opts = sensorData[key].options;
+    for (var i = 0; i < opts.length; i++) {
+      if (opts[i].checked) {
+        html += '<div class="selected-item"><span>' + opts[i].label + '</span>';
+        html += '<button class="remove" onclick="removeSelected(\'' + key + '\',\'' + opts[i].id + '\')">✕</button></div>';
+      }
+    }
+  }
+  if (!html) html = '<div style="font-size:12px;color:var(--text-dim);padding:20px 0;text-align:center">暂无已选传感器</div>';
+  document.getElementById('selectedList').innerHTML = html;
+}
+
+renderCenter();
+renderSelected();
+renderBottom();
+
+function toggleTheme() {
+  var html = document.documentElement;
+  var btn = document.getElementById('themeBtn');
+  if (html.getAttribute('data-theme') === 'dark') {
+    html.removeAttribute('data-theme');
+    btn.textContent = '☀';
+    btn.title = '切换到黑夜模式';
+  } else {
+    html.setAttribute('data-theme', 'dark');
+    btn.textContent = '☾';
+    btn.title = '切换到白天模式';
+  }
+}
+</script>
+</body>
+</html>
