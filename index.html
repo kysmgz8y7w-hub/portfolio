@@ -94,23 +94,34 @@
     }
 
     .hero-content {
-      text-align: center; max-width: 700px;
+      text-align: center; max-width: 900px;
       position: relative; z-index: 1;
     }
 
-    .avatar {
-      width: 120px; height: 120px;
-      border-radius: 50%; margin: 0 auto 28px;
-      background: linear-gradient(135deg, var(--accent), var(--purple));
-      display: flex; align-items: center; justify-content: center;
-      font-size: 42px; font-weight: 700; color: #fff;
-      box-shadow: 0 0 40px var(--accent-glow);
-      position: relative;
+    .hero-top-label {
+      font-size: 14px; letter-spacing: 4px; color: var(--text-sec);
+      margin-bottom: 20px; font-weight: 400;
     }
-    .avatar::after {
-      content: ''; position: absolute; inset: -4px;
-      border-radius: 50%;
-      border: 2px solid rgba(74,144,255,0.2);
+
+    .hero-big-title {
+      font-size: 120px; font-weight: 900; letter-spacing: 8px;
+      color: #fff; line-height: 1;
+      text-shadow: 0 0 40px rgba(255,255,255,0.3), 0 0 80px rgba(255,255,255,0.15), 0 0 120px rgba(255,255,255,0.05);
+      margin-bottom: -10px;
+    }
+
+    .hero-design-text {
+      font-size: 60px; font-family: 'Georgia', 'Times New Roman', serif;
+      font-style: italic; color: #3344cc;
+      margin-bottom: 12px; font-weight: 400;
+    }
+
+    .hero-sub-label {
+      font-size: 16px; color: var(--text-sec);
+      letter-spacing: 2px; margin-bottom: 36px;
+      padding: 6px 20px; display: inline-block;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 4px;
     }
 
     .hero h1 {
@@ -119,12 +130,6 @@
       background: linear-gradient(135deg, var(--text) 0%, var(--text-sec) 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       background-clip: text;
-    }
-
-    .hero .subtitle {
-      font-size: 20px; color: var(--accent);
-      font-weight: 500; margin-bottom: 20px;
-      letter-spacing: 2px;
     }
 
     .hero .desc {
@@ -359,10 +364,10 @@
   <!-- Hero -->
   <section class="hero" id="hero">
     <div class="hero-content">
-      <div class="avatar">P</div>
-      <div class="subtitle">UI / HMI 设计师</div>
-      <h1>用设计驱动智能出行体验</h1>
-      <p class="desc">HMI 设计师，聚焦车载交互体验。我相信好的座舱设计是让驾驶者无需思考就能操作。</p>
+      <div class="hero-top-label">DESIGN PORTFOLIO</div>
+      <h1 class="hero-big-title">PORTFOLIO</h1>
+      <div class="hero-design-text">Design</div>
+      <div class="hero-sub-label">Work Samples 品牌×视觉</div>
       <div class="hero-btns">
         <a href="#works" class="btn-hero primary">查看作品</a>
         <a href="#about" class="btn-hero ghost">了解更多</a>
